@@ -217,3 +217,77 @@ it("offers keyboard card navigation and honors reduced motion", () => {
 	expect(scroll).toHaveBeenCalledWith({ block: "start", behavior: "instant" });
 	expect(document.activeElement).toBe(container.querySelectorAll("article")[1]);
 });
+
+it.each(["wheel", "touch"])(
+	"settles rapid %s scrolling at the current page instead of pulling back to the gesture origin",
+	(input) => {
+		vi.useFakeTimers({
+			toFake: [
+				"setTimeout",
+				"clearTimeout",
+				"requestAnimationFrame",
+				"cancelAnimationFrame",
+			],
+		});
+		try {
+			const chapter = semanticFixture();
+			const onLocation = vi.fn();
+			const view = render(
+				<main>
+					<ReadingSurface
+						chapter={chapter}
+						density="Spacious"
+						restoreId={1}
+						targetKey="a"
+						onLocation={onLocation}
+					/>
+				</main>,
+			);
+			act(() => vi.advanceTimersByTime(32));
+			const main = view.container.querySelector("main")!;
+			const articles = [...view.container.querySelectorAll("article")];
+			Object.defineProperty(main, "clientHeight", {
+				configurable: true,
+				value: 800,
+			});
+			vi.spyOn(
+				HTMLElement.prototype,
+				"getBoundingClientRect",
+			).mockImplementation(function (this: HTMLElement) {
+				const index = articles.indexOf(this.closest("article")!);
+				const top = index < 0 ? 0 : index * 800 - main.scrollTop;
+				return {
+					top,
+					bottom: top + 800,
+					left: 0,
+					right: 390,
+					// Keep jsdom layout measurement disabled; only page positions are modeled.
+					width: 0,
+					height: 800,
+					x: 0,
+					y: top,
+					toJSON: () => ({}),
+				};
+			});
+			const scroll = vi.fn(({ top }: ScrollToOptions) => {
+				main.scrollTop = top ?? 0;
+			});
+			main.scrollTo = scroll;
+			if (input === "wheel") fireEvent.wheel(main, { deltaY: 2000 });
+			else
+				fireEvent.touchStart(main, {
+					touches: [{ clientX: 200, clientY: 400 }],
+				});
+			// Momentum or repeated fast input has reached the third page before settling.
+			main.scrollTop = 1580;
+			fireEvent.scroll(main);
+			if (input === "touch") fireEvent.touchEnd(main, { touches: [] });
+			fireEvent(main, new Event("scrollend"));
+			expect(scroll).toHaveBeenCalledWith({ top: 1600, behavior: "instant" });
+			expect(main.scrollTop).toBe(1600);
+			expect(onLocation).toHaveBeenLastCalledWith("c");
+		} finally {
+			vi.useRealTimers();
+		}
+	},
+);

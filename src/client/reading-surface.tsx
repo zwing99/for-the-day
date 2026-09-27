@@ -327,7 +327,6 @@ export function ReadingSurface({
 		let frame = 0;
 		let settled: ReturnType<typeof setTimeout>;
 		let touching = false;
-		let gestureStart: number | undefined;
 		const pages = () => [
 			...element.querySelectorAll<HTMLElement>(".verse-card, .intro"),
 			...surface.querySelectorAll<HTMLElement>(":scope > .attribution"),
@@ -359,18 +358,7 @@ export function ReadingSurface({
 			if (restoring.current || touching || document.getSelection()?.toString())
 				return;
 			const top = surface.getBoundingClientRect().top;
-			const candidates = pages().filter(
-				(page) =>
-					gestureStart === undefined ||
-					Math.abs(
-						surface.scrollTop +
-							page.getBoundingClientRect().top -
-							top -
-							gestureStart,
-					) <=
-						surface.clientHeight + 2,
-			);
-			const closest = candidates.sort(
+			const closest = pages().sort(
 				(a, b) =>
 					Math.abs(a.getBoundingClientRect().top - top) -
 					Math.abs(b.getBoundingClientRect().top - top),
@@ -383,7 +371,6 @@ export function ReadingSurface({
 						behavior: "instant",
 					});
 			}
-			gestureStart = undefined;
 			update();
 		};
 		const scroll = () => {
@@ -394,7 +381,6 @@ export function ReadingSurface({
 		};
 		const touchStart = () => {
 			touching = true;
-			gestureStart = surface.scrollTop;
 			clearTimeout(settled);
 		};
 		const touchEnd = () => {
@@ -405,11 +391,7 @@ export function ReadingSurface({
 		const resumeSnap = () => {
 			surface.style.scrollSnapType = "";
 		};
-		const wheelStart = () => {
-			gestureStart ??= surface.scrollTop;
-			resumeSnap();
-		};
-		surface.addEventListener("wheel", wheelStart, { passive: true });
+		surface.addEventListener("wheel", resumeSnap, { passive: true });
 		surface.addEventListener("touchstart", resumeSnap, { passive: true });
 		surface.addEventListener("keydown", resumeSnap);
 		surface.addEventListener("scroll", scroll, { passive: true });
@@ -438,7 +420,7 @@ export function ReadingSurface({
 			surface.removeEventListener("touchcancel", touchEnd);
 			window.removeEventListener("resize", scroll);
 			observer?.disconnect();
-			surface.removeEventListener("wheel", wheelStart);
+			surface.removeEventListener("wheel", resumeSnap);
 			surface.removeEventListener("touchstart", resumeSnap);
 			surface.removeEventListener("keydown", resumeSnap);
 		};

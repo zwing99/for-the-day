@@ -49,10 +49,10 @@ Block 5 completion reconciles the existing implementation with [the archived scr
 
 ## 7. Semantic packing, densities, and formatting
 
-- [ ] 7.1 Implement deterministic text/line-budget estimation and complete verse units retaining literary paths; verify stable output for repeated inputs and conservation of all ordered text leaves/fragments without duplicating chapter text into cards.
-- [ ] 7.2 Implement Spacious one-verse/atomic-span cards and Balanced/Compact natural-unit grouping with distinct budgets; verify tests for every density, paragraph/stanza boundaries, poetry indentation, headings, very short content, and outputs that are not fixed verse counts.
-- [ ] 7.3 Implement heading attachment, parent-preserving long-unit continuations at valid verse boundaries, and indivisible oversized page-local type fitting; verify no orphan headings, verse splitting, omitted text, clipping, internal reading scrolling, or midway settled stops across representative fixtures.
-- [ ] 7.4 Connect stable quantized budgets from actual reading-column width/height and typography, with repacking around the current logical anchor; verify increased Balanced/Compact grouping on larger usable tablet budgets, unchanged Spacious behavior, and location/preference preservation across density/type-size/rotation/Split View changes; document adaptive packing invariants and refinement knobs.
+- [x] 7.1 Implement deterministic text/line-budget estimation and complete verse units retaining literary paths; verify stable output for repeated inputs and conservation of all ordered text leaves/fragments without duplicating chapter text into cards.
+- [x] 7.2 Implement Spacious one-verse/atomic-span cards and Balanced/Compact natural-unit grouping with distinct budgets; verify tests for every density, paragraph/stanza boundaries, poetry indentation, headings, very short content, and outputs that are not fixed verse counts.
+- [x] 7.3 Implement heading attachment, parent-preserving long-unit continuations at valid verse boundaries, and indivisible oversized page-local type fitting; verify no orphan headings, verse splitting, omitted text, clipping, internal reading scrolling, or midway settled stops across representative fixtures.
+- [x] 7.4 Connect stable quantized budgets from actual reading-column width/height and typography, with repacking around the current logical anchor; verify increased Balanced/Compact grouping on larger usable tablet budgets, unchanged Spacious behavior, and location/preference preservation across density/type-size/rotation/Split View changes; document adaptive packing invariants and refinement knobs.
 
 ## 8. Remaining providers and bounded ESV caching
 

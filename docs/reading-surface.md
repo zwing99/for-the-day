@@ -1,5 +1,15 @@
 # Native reading surface
 
+## Adaptive semantic packing
+
+The chapter tree owns text; cards contain ordered leaf references and complete verse identities. The renderer reconstructs their original literary parents, so paragraph continuations retain their association and poetry retains indentation and line breaks. Leading headings attach to the following complete verse. Merged spans stay together.
+
+Packing estimates line costs from text length, literary blocks, indentation, breaks, and heading space. Balanced targets 55% of estimated usable lines; Compact targets 85%. These fractions are refinement knobs, not verse counts. Budgets use the actual bounded column, current type and line height, and page padding. Width and height are quantized in four-column/four-line steps; resize measurement waits 120ms. Spacious remains one complete verse or merged span. Measured overflowing groups split at complete verse boundaries before indivisible content receives local fitting. Unknown literary parents remain atomic even when they contain recognizable paragraphs; measured repair preserves that status.
+
+Playwright MCP verification for block 7.x covered exact invented-text conservation and verse-8 retention through density, font-size, rotation, and Split View changes. A 30-unit fixture used 10 Balanced/5 Compact pages on 390×844, versus 3/3 on 820×1180; Spacious used 30 at both sizes. Larger type reduced capacity without changing the anchor. A nested unknown group stayed on one page in Balanced and Compact, fitting 672.89px of content into 673px available space. Chromium magnification reached 2× with `pan-y pinch-zoom` and its anchor retained.
+
+The five real CSB benchmark references in `AGENTS.md` passed 90 default-type cases across all densities at 320×568, 390×844, 844×390, 768×1024, 1180×820, and 375×1024. Measured usable surface heights were respectively 524, 738, 346, 918, 714, and 918px; minimum effective default sizes were 17.44, 20, 16, 20, 20, and 20px, with no local reduction required. Another 60 large/larger-type cases on 320×568 and 844×390 passed, with minimum effective sizes 19.27/19.63px. Fifteen 200%-text cases at 320×568 passed with 476–490px usable surface height and minimum effective size 18.43px. All checked pages fit completely and aligned without body overflow. Fonts and semantic rendering were unchanged; the existing full-corpus measurements remain applicable. WebKit and physical iPhone/iPad Safari were not exercised in this verification.
+
 ## Horizontal passage transitions
 
 Deliberate touch and horizontal trackpad gestures lock their axis after 12px; horizontal intent requires 1.75 times the vertical displacement. The outgoing surface follows the drag and reveals an inert, aria-hidden, passage-labeled loading panel. Previews do not fetch or persist neighboring Scripture. Release requires at least 56px, horizontal dominance, and no more than 700ms. Completion and return take 180ms; reduced motion removes translation and commits immediately. Trackpad release uses a 140ms quiet period and suppresses continuing momentum until another 180ms input gap.

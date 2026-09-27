@@ -179,3 +179,100 @@ it("reduces grouped cards at complete verse boundaries and conserves ordered ide
 		splitMerged?.find((card) => card.verseKeys.includes("c"))?.verseKeys,
 	).toEqual(["c", "d"]);
 });
+
+it("keeps unknown multi-verse literary structures atomic during measured overflow repair", () => {
+	const chapter = sequence(4);
+	chapter.nodes = [
+		{
+			id: "unfamiliar",
+			kind: "group",
+			role: "unknown",
+			source: { path: "unfamiliar" },
+			children: chapter.nodes,
+		},
+	];
+	for (const density of ["Balanced", "Compact"] as Density[]) {
+		const cards = packChapter(chapter, density, { columns: 12, lines: 4 });
+		expect(cards).toHaveLength(1);
+		expect(cards[0]).toMatchObject({ indivisible: true, oversized: true });
+		expect(
+			reduceOverflowingGroups(
+				cards,
+				packChapter(chapter, "Spacious", { columns: 12, lines: 4 }),
+				new Set([cards[0]!.key]),
+			),
+		).toBeUndefined();
+		expect(leafText(chapter, cards[0]!.nodeIds)).toEqual(
+			orderedText(chapter.nodes),
+		);
+	}
+});
+
+it("uses whole natural paragraphs before continuing a long paragraph at verse boundaries", () => {
+	const chapter = sequence(4);
+	const leaves = chapter.nodes.flatMap((node) =>
+		node.kind === "group" ? node.children : [],
+	);
+	chapter.nodes = [0, 2].map((start) => ({
+		id: `paragraph${start}`,
+		kind: "group",
+		role: "paragraph",
+		source: { path: `paragraph${start}` },
+		children: leaves.slice(start, start + 2),
+	}));
+	expect(
+		packChapter(chapter, "Balanced", { columns: 32, lines: 8 }).map(
+			(card) => card.verseKeys,
+		),
+	).toEqual([
+		["v0", "v1"],
+		["v2", "v3"],
+	]);
+	for (const density of ["Spacious", "Balanced", "Compact"] as Density[]) {
+		const short = packChapter(sequence(1), density, { columns: 32, lines: 16 });
+		expect(short).toHaveLength(1);
+		expect(short[0]!.verseKeys).toEqual(["v0"]);
+	}
+});
+
+it("moves consecutive division headings with their following verse at a budget boundary", () => {
+	const chapter = sequence(3);
+	chapter.nodes.splice(
+		1,
+		0,
+		...["first", "second"].map(
+			(id): SemanticNode => ({
+				id,
+				kind: "group",
+				role: "heading",
+				source: { path: id },
+				children: [
+					{
+						id: `${id}-text`,
+						kind: "text",
+						text: `Invented ${id} division`,
+						verseKeys: [],
+						marks: [],
+						source: { path: `${id}-text` },
+					},
+				],
+			}),
+		),
+	);
+	for (const density of ["Spacious", "Balanced", "Compact"] as Density[]) {
+		const cards = packChapter(chapter, density, { columns: 24, lines: 8 });
+		const headingCard = cards.find((card) =>
+			card.nodeIds.includes("first-text"),
+		)!;
+		expect(headingCard.nodeIds).toEqual(["first-text", "second-text", "v1"]);
+		expect(headingCard.verseKeys).toEqual(["v1"]);
+	}
+});
+
+it("quantizes small layout changes and reduces capacity for shorter or narrower surfaces", () => {
+	const baseline = layoutBudget(300, 640, 20, 34);
+	expect(layoutBudget(301, 641, 20, 34)).toEqual(baseline);
+	expect(layoutBudget(300, 400, 20, 34).lines).toBeLessThan(baseline.lines);
+	expect(layoutBudget(200, 640, 20, 34).columns).toBeLessThan(baseline.columns);
+	expect(layoutBudget(1200, 640, 20, 34).columns).toBeLessThanOrEqual(65);
+});

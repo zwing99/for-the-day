@@ -13,6 +13,8 @@ export interface PackedCard {
 	nodeIds: string[];
 	verseKeys: string[];
 	oversized?: boolean;
+	/** Unknown literary structures must stay intact during measured fitting. */
+	indivisible?: boolean;
 }
 
 /** Split only at complete-verse boundaries, preserving the source node sequence. */
@@ -20,6 +22,7 @@ export function splitPackedCard(
 	card: PackedCard,
 	atomicCards: PackedCard[],
 ): PackedCard[] | undefined {
+	if (card.indivisible) return undefined;
 	const units = atomicCards.filter((unit) =>
 		unit.verseKeys.some((key) => card.verseKeys.includes(key)),
 	);
@@ -195,14 +198,20 @@ export function packChapter(
 		for (const id of card.nodeIds) {
 			const node = nodes.get(id)!;
 			if (node.kind !== "text" || !node.verseKeys.length) continue;
+			const path = ancestors.get(id) ?? [];
 			return (
-				[...(ancestors.get(id) ?? [])].reverse().find((parent) => {
+				path.find((parent) => {
+					const n = nodes.get(parent)!;
+					return n.kind === "group" && n.role === "unknown";
+				}) ??
+				[...path].reverse().find((parent) => {
 					const n = nodes.get(parent)!;
 					return (
 						n.kind === "group" &&
 						["paragraph", "stanza", "unknown"].includes(n.role)
 					);
-				}) ?? card.key
+				}) ??
+				card.key
 			);
 		}
 		return card.key;
@@ -233,7 +242,11 @@ export function packChapter(
 		const parent = nodes.get(naturalKey(group[0]!));
 		if (parent?.kind === "group" && parent.role === "unknown") {
 			flush();
-			output.push({ ...whole, oversized: cost(whole) > budget.lines });
+			output.push({
+				...whole,
+				indivisible: true,
+				oversized: cost(whole) > budget.lines,
+			});
 			continue;
 		}
 		if (cost(whole) <= limit) {

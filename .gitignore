@@ -25,6 +25,7 @@
 # Icon must end with two \r
 Icon
 
+
 # Thumbnails
 ._*
 
@@ -138,13 +139,13 @@ web_modules/
 .next
 out
 
-# Nuxt build / generate output
+# Nuxt.js build / generate output
 .nuxt
 dist
 
 # Gatsby files
 .cache/
-# Comment in the public line if your project uses Gatsby and not Next.js
+# Comment in the public line in if your project uses Gatsby and not Next.js
 # https://nextjs.org/blog/next-9-1#public-directory-support
 # public
 
@@ -172,7 +173,7 @@ dist
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
 
-# Yarn v2
+# yarn v2
 .yarn/cache
 .yarn/unplugged
 .yarn/build-state.yml
@@ -183,14 +184,15 @@ dist
 # Serverless Webpack directories
 .webpack/
 
+# Optional stylelint cache
+
 # SvelteKit build / generate output
 .svelte-kit
 
 ### Vim ###
 # Swap
 [._]*.s[a-v][a-z]
-# Keep SVG files even when their names resemble Vim swap files.
-!*.svg
+!*.svg  # comment out if you don't need vector files
 [._]*.sw[a-p]
 [._]s[a-rt-v][a-z]
 [._]ss[a-gi-z]
@@ -202,10 +204,10 @@ Sessionx.vim
 
 # Temporary
 .netrwhist
-[._]*.un~
-
 # Auto-generated tag files
 tags
+# Persistent undo
+[._]*.un~
 
 ### VisualStudioCode ###
 .vscode/*
@@ -254,6 +256,14 @@ $RECYCLE.BIN/
 
 # End of https://www.toptal.com/developers/gitignore/api/vim,visualstudiocode,windows,linux,macos,node
 
-# Project-specific: ignore all local env variants while keeping safe examples shareable.
+# Project-specific: keep credentials and copyrighted provider samples local.
 .env.*
 !.env.example
+.local/
+
+# Project-specific: direnv holds local server credentials and approval state.
+.envrc
+.direnv/
+
+# Project-specific: browser diagnostics may contain provider text and tracking tokens.
+.playwright-mcp/

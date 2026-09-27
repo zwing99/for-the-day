@@ -1,0 +1,29 @@
+services:
+  dynamodb:
+    image: amazon/dynamodb-local:2.6.1
+    # Named volumes begin root-owned; the local-only process must create its DB.
+    user: "0:0"
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /home/dynamodblocal/data"
+    ports:
+      - "127.0.0.1:${DYNAMODB_PORT:-8000}:8000"
+    volumes:
+      - dynamodb-data:/home/dynamodblocal/data
+  db-init:
+    image: amazon/aws-cli:2.36.34
+    depends_on:
+      dynamodb:
+        condition: service_started
+    environment:
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+      AWS_DEFAULT_REGION: ${DYNAMODB_REGION:-us-east-1}
+      AWS_EC2_METADATA_DISABLED: "true"
+      AWS_MAX_ATTEMPTS: "1"
+      AWS_PAGER: ""
+      DYNAMODB_TABLE: ${DYNAMODB_TABLE:-for-the-day-chapters}
+    entrypoint: ["/bin/sh", "/init/db-init.sh"]
+    volumes:
+      - ./scripts/db-init.sh:/init/db-init.sh:ro
+    restart: "no"
+volumes:
+  dynamodb-data:

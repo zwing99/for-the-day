@@ -1,0 +1,95 @@
+[tools]
+bun = "1.3.12"
+node = "24.21.0"
+
+[tasks.install]
+description = "Install locked JavaScript dependencies"
+run = "bun install --frozen-lockfile"
+
+[tasks.typecheck]
+description = "Check browser and Node-compatible server TypeScript"
+run = ["bun x --no-install tsc -p tsconfig.client.json", "bun x --no-install tsc -p tsconfig.server.json"]
+
+[tasks."dev:web"]
+description = "Run the localhost Vite frontend"
+run = "bun x --no-install vite"
+
+[tasks."dev:api"]
+description = "Run the local Node-compatible Hono listener"
+run = "bun --watch src/server/listener.ts"
+
+[tasks.test]
+description = "Run Docker-independent unit tests"
+run = "bun x --no-install vitest run tests/unit"
+
+[tasks.build]
+description = "Build browser assets and Node-compatible API"
+run = ["bun x --no-install vite build", "bun build src/server/listener.ts --target=node --outdir=dist/server"]
+
+[tasks."db:start"]
+description = "Start persistent DynamoDB Local (requires Docker Desktop)"
+run = "docker compose up -d dynamodb"
+
+[tasks."db:stop"]
+description = "Stop DynamoDB Local while retaining its data volume"
+run = "docker compose stop dynamodb"
+
+[tasks."db:init"]
+description = "Wait for DynamoDB Local and initialize the table idempotently"
+run = "docker compose run --rm db-init"
+
+[tasks.setup]
+description = "Install dependencies, preserve configuration, and prepare local database"
+run = ["bun install --frozen-lockfile", "bun scripts/setup.ts", "mise run db:start", "mise run db:init"]
+
+[tasks.dev]
+description = "Prepare database and supervise frontend/API; Ctrl-C stops both"
+run = ["mise run db:start", "mise run db:init", "bun scripts/dev.ts"]
+
+[tasks.preview]
+description = "Serve the production build and API locally (build first)"
+run = ["mise run db:start", "mise run db:init", "bun scripts/dev.ts --preview"]
+
+[tasks.lint]
+description = "Check source lint rules"
+run = "bun x --no-install biome lint ."
+
+[tasks."format:check"]
+description = "Check source formatting"
+run = "bun x --no-install biome format ."
+
+[tasks.format]
+description = "Format source files"
+run = "bun x --no-install biome check --write ."
+
+[tasks.check]
+description = "Run typechecking, lint, formatting, and Docker-independent tests"
+depends = ["typecheck", "lint", "format:check", "test"]
+
+[tasks."test:domain"]
+description = "Run focused pure domain tests"
+run = "bun x --no-install vitest run tests/unit/domain"
+
+[tasks."configure:envrc"]
+description = "Prompt for server provider credentials and create a private direnv file"
+run = "bash scripts/configure-envrc.sh"
+
+[tasks."inspect:csb"]
+description = "Opt-in authenticated CSB samples saved only under ignored .local"
+run = "bun scripts/inspect-csb.ts"
+
+[tasks."verify:csb-samples"]
+description = "Verify exact text and structure of existing ignored CSB samples offline"
+run = "bun scripts/verify-csb-samples.ts"
+
+[tasks."verify:verse-fit"]
+description = "Opt-in full CSB Psalms/Proverbs renderer measurement (requires local API and Chrome)"
+run = "bun scripts/verify-verse-fit.ts"
+
+[tasks."test:integration"]
+description = "Run isolated DynamoDB Local repository tests (db:start first)"
+run = "bun x --no-install vitest run tests/integration"
+
+[tasks."smoke:csb"]
+description = "Opt-in real CSB API/cache/React smoke test (dev and saved samples required)"
+run = "bun x --no-install vitest run tests/manual/csb-smoke.test.tsx"

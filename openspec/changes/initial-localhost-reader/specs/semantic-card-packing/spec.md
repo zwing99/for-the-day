@@ -4,6 +4,8 @@
 
 Group semantic Scripture into readable cards according to density and viewport budget without changing text or sacrificing literary structure.
 
+The corrected screen geometry, complete-content fitting, and visible horizontal transitions follow `screen-snapping-passage-transitions` (latest user decision, 2026-09-26). Former proximity/taller-card/no-shrink behavior is superseded; unrelated requirements are retained.
+
 ## ADDED Requirements
 
 ### Requirement: Deterministic packing and fidelity
@@ -51,7 +53,7 @@ A heading, Psalm title, or acrostic division SHALL be attached to following Scri
 - **THEN** the heading moves with that following verse
 
 ### Requirement: Large literary units and accessible overflow
-Oversized natural units SHALL first use valid internal literary boundaries at complete verse boundaries where possible, retaining their parent association. When such a split would cut a verse, inseparable span, or atomic literary structure, the unit SHALL remain intact on a taller card in the same vertical scroll flow. Overflow SHALL remain readable without clipping, forced tiny text, a nested vertical scroller, or a snap trap. Increased font size and small viewports SHALL not hide content.
+Oversized natural units SHALL first use valid internal literary boundaries at complete verse boundaries where possible, retaining their parent association. When such a split would cut a verse, inseparable span, or atomic literary structure, the unit SHALL remain intact on one exact usable-height page, using measured page-local typography reduction as needed. Complete content SHALL fit without clipping, removed line breaks, an internal reading scrollbar, or an intermediate settled position. Increased font size and small viewports SHALL not hide content.
 
 #### Scenario: Long paragraph with valid verse boundaries
 - **WHEN** a paragraph exceeds the budget and can be separated at complete verse boundaries
@@ -59,7 +61,7 @@ Oversized natural units SHALL first use valid internal literary boundaries at co
 
 #### Scenario: Very long indivisible verse
 - **WHEN** a single verse exceeds the usable viewport budget
-- **THEN** its complete text remains on one taller card and can be scrolled through before reaching the next card
+- **THEN** its complete text and literary structure fit one aligned page through measured typography reduction before navigation reaches the next page
 
 ### Requirement: Repacking preserves logical location
 Changing density, font size, or viewport budget SHALL locate the reader's existing logical verse anchor in the resulting cards rather than restore an obsolete card index. Literary formatting SHALL remain intact in every density.

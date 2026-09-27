@@ -4,10 +4,12 @@
 
 Present Scripture in a quiet, polished, accessible mobile reader with restrained context and controls, persistent preferences, and useful loading and recovery behavior.
 
+The corrected screen geometry, complete-content fitting, and visible horizontal transitions follow `screen-snapping-passage-transitions` (latest user decision, 2026-09-26). Former proximity/taller-card/no-shrink behavior is superseded; unrelated requirements are retained.
+
 ## ADDED Requirements
 
 ### Requirement: Typography and restrained presentation
-Scripture SHALL be the dominant reading content. Light, dark, and system appearance SHALL provide readable text, meaningful literary indentation, and sufficient contrast. Short passages SHALL receive intentional spacing; long passages SHALL remain comfortably readable. Text SHALL not be clipped or reduced excessively to fit a screen. The experience SHALL avoid advertising, monetization, social mechanics, gamification, decorative gradients, ornamental religious imagery, dashboard presentation, and excessive permanent controls.
+Scripture SHALL be the dominant reading content. Light, dark, and system appearance SHALL provide readable text, meaningful literary indentation, and sufficient contrast. Short passages SHALL receive intentional spacing; long passages SHALL remain comfortably readable. Text SHALL not be clipped. Default typography SHALL fit measured worst-case real verse and attached-heading benchmarks; indivisible oversized pages SHALL use only the measured reduction needed for complete fit while retaining selected preferences and native zoom. Effective sizes and legibility SHALL be verified. The experience SHALL avoid advertising, monetization, social mechanics, gamification, decorative gradients, ornamental religious imagery, dashboard presentation, and excessive permanent controls.
 
 #### Scenario: Short and long cards
 - **WHEN** the reader displays a short verse and an oversized poetic passage
@@ -36,7 +38,7 @@ Intros SHALL be enabled initially and disableable in settings. They SHALL identi
 - **THEN** the intro identifies the book/chapter without a fabricated title
 
 ### Requirement: Quiet persistent orientation
-While reading, a subtle passage identifier SHALL remain near the top without overlapping text. A restrained ordered passage indicator SHALL identify the current day's passages, indicate the active passage beyond color alone, and allow direct selection. Optional progress SHALL describe location without streaks, completion rewards, or engagement prompts. Essential controls SHALL remain discoverable through keyboard and screen readers when reading chrome is minimized.
+While reading, a subtle passage identifier SHALL remain near the top without overlapping text. A restrained ordered passage indicator SHALL identify the current day's passages, indicate the active passage beyond color alone, and allow direct selection. On constrained-height viewports, redundant brand and indicators MAY be omitted to preserve reading space, with direct passage choices retained in the named menu. Optional progress SHALL describe location without streaks, completion rewards, or engagement prompts. Essential controls SHALL remain discoverable through keyboard and screen readers when reading chrome is minimized.
 
 #### Scenario: Orientation
 - **WHEN** Psalm 86 is active

@@ -38,3 +38,7 @@ None; the repository has no existing behavioral specifications or application im
 Implementation will introduce frontend, server, shared domain, and test modules; `mise.toml`, `compose.yml`, a Bun lockfile, `.env.example`, and setup documentation. Provider access requires server-side API.Bible and Crossway credentials; local AWS credentials are dummy values and no AWS account is needed. React/Vite/Hono, a Node-compatible DynamoDB client, focused test tooling, and a server-side HTML parser are anticipated dependencies; hn-tok's native browser patterns should be adapted before adding gesture or animation libraries.
 
 The design records an actual source review of [hn-tok](https://github.com/rewdy/hn-tok/tree/08f7548bfbbe258aff0ce3927760e09096cfd9da), the reuse candidates and limitations, and provider documentation evidence. No external credentials, copyrighted Scripture text, or reference application source will be committed by this planning change.
+
+## Precedence correction — 2026-09-26
+
+The user-approved `screen-snapping-passage-transitions` change takes precedence for vertical page geometry, settling/restoration, oversized-content fitting, and horizontal transitions. These artifacts are corrected to that contract so sync/archive order cannot restore the former proximity-snap/taller-card behavior. Earlier implementation evidence is historical; reopened tasks require verification under the corrected contract. Unrelated requirements remain in force.

@@ -1,0 +1,24 @@
+# Local chapter API and cache
+
+The current runnable milestone reads CSB Psalm 23. The frontend shows an intro with Begin, complete verse cards, exact provider attribution, loading/retry states, and view reporting on Scripture display. Full day navigation, settings, density packing and other translations belong to later tasks.
+
+`GET /api/bible/:translation/:book/:chapter` returns `{ chapter }`. The API validates CSB/NIV/NLT/ESV, PSA/PRO and chapter ranges before access. Only CSB is wired at this milestone; other translations return a safe configuration error. Optional `readingDay` (1–31) and `timeZone` are validated; ESV policy is not wired yet. Errors return `{ error: { code, message, retryAfterSeconds? } }`: 400 invalid request, 404 unavailable chapter, 429 rate limit, 502 normalization failure, 503 provider configuration/access/outage or local cache failure. All API responses use `Cache-Control: no-store`. Upstream bodies, credentials and diagnostics are not returned or logged.
+
+The chapter service deduplicates concurrent requests, reads the repository first, and calls the provider only on a miss or expired/incompatible entry. It never serves expired content after refresh failure. DynamoDB stores one losslessly gzipped whole chapter per schema/provider/translation/edition/book/chapter key. An oversized record bypasses storage intact. Entries expire 86,400 seconds after retrieval.
+
+`mise run db:init` idempotently enables built-in DynamoDB row TTL on the numeric Unix-seconds `expiresEpochSeconds` attribute. Manifest rows omit TTL. [AWS documents asynchronous TTL deletion](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/TTL.html), so application reads independently reject expired items and explicit maintenance removes expired records before admission and every minute while the listener runs. No immediate native-deletion guarantee is assumed for DynamoDB Local.
+
+A conditional per-edition manifest bounds API.Bible storage to 400 verses, evicting oldest whole chapters. Admission and eviction update the manifest and records atomically; conflicts reread and retry within a fixed bound. Physical retained expiry counts until removal. ESV requires the later eligibility and budget implementation and is not admitted by this repository yet.
+
+`mise run test` is Docker-independent. `mise run test:integration` requires `mise run db:start`, creates a unique temporary table, enables native TTL, checks storage/freshness/isolation/capacity/concurrency, and deletes only that test table. For intentional live checks, run `direnv exec . mise run dev`, then `direnv exec . mise run smoke:csb` in another terminal after saving provider samples. This separate test verifies real provider/API/cache/React text conservation and Vite proxy delivery without printing Scripture.
+
+## Verification checkpoint (2026-09-26)
+
+- CSB authenticated sample fidelity passed for Psalms 23, 3, 119 and Proverbs 7: exact ordered text, hierarchy, source attributes, attribution, tracking, and verse counts.
+- 96 unit/component tests, typechecks, lint, formatting and production build passed.
+- 10 isolated DynamoDB Local integration tests passed, including native TTL configuration and seconds metadata, retained expired rows, physical cleanup, whole-chapter eviction, concurrent bounded admission, and fresh-cache provider avoidance.
+- Real CSB smoke passed: provider → Hono → DynamoDB → normalized chapter → six React cards; exact rendered text/attribution, repeated cache hit, and live Vite no-store response verified.
+- Built API ran under pinned Node 24 and returned the real cached CSB chapter. Actual configured server keys were absent from browser assets.
+- The newly added standalone Playwright MCP works in Codex CLI. Browser checks passed at 390×844, 820×1180 and 320×568: exact rendered text and attribution, six complete cards, poetry indentation, no horizontal overflow, accessible attribution expansion, and no console errors. Phone/tablet screenshots were visually reviewed and stay ignored locally. Intro display loaded no tracker; Begin reported the cached FUMS token once with HTTP 200. Resize and attribution expansion did not duplicate reporting. Component tests also cover StrictMode deduplication, intro/prefetch suppression, and loading/retry. Tasks 1.2 and 4.6 are complete. The earlier in-app Browser plugin failure is a separate unresolved integration issue; use Playwright MCP for future browser checks. Physical Safari and broader reader behavior remain later gates.
+
+Implementation intentionally stops at the 4.x boundary for user-requested context compaction. Tasks 4.1–4.6 are complete; overall progress is 16/53 after also resolving task 1.2. Preserve all uncommitted work and ignored provider samples. Resume from OpenSpec apply instructions, then task 5.1 when authorized. Do not treat this checkpoint as completion of the full reader.

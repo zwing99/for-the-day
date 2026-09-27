@@ -4,17 +4,19 @@
 
 Make passages effortless to navigate while retaining independent logical locations across passage changes, URLs, browser history, preferences, and translation changes.
 
+The corrected screen geometry, complete-content fitting, and visible horizontal transitions follow `screen-snapping-passage-transitions` (latest user decision, 2026-09-26). Former proximity/taller-card/no-shrink behavior is superseded; unrelated requirements are retained.
+
 ## ADDED Requirements
 
 ### Requirement: Native vertical navigation
-Vertical movement SHALL navigate cards within the current passage using native browser scrolling with CSS snapping where appropriate. The reader SHALL use one active vertical scroll surface and SHALL NOT require a nested two-dimensional scroll surface. Reading past the last card SHALL remain in the current passage until explicit passage navigation. Oversized cards SHALL support continuous reading without inaccessible snap behavior.
+Vertical movement SHALL navigate cards within the current passage using native browser scrolling with mandatory page snapping and complete usable-height pages. The reader SHALL use one active vertical scroll surface and SHALL NOT require a nested two-dimensional scroll surface. Reading past the last card SHALL remain in the current passage until explicit passage navigation. Oversized indivisible cards SHALL fit complete content using measured page-local typography reduction, with no intermediate settled positions or internal reading scrollbar.
 
 #### Scenario: Vertical reading
 - **WHEN** the reader scrolls upward through a Psalm
-- **THEN** subsequent cards in that Psalm appear without changing passages
+- **THEN** subsequent complete pages in that Psalm settle at viewport boundaries without changing passages
 
 ### Requirement: Deliberate horizontal passage navigation
-A clearly horizontal leftward swipe SHALL select the next passage and a rightward swipe SHALL select the previous passage. Predominantly vertical and ambiguous diagonal gestures SHALL NOT change passages. Multi-touch, cancelled gestures, text selection, and gestures on controls SHALL NOT trigger passage changes. The sequence SHALL have bounded ends without wraparound. Native vertical scrolling and zoom SHALL remain available.
+A clearly horizontal leftward swipe SHALL select the next passage and a rightward swipe SHALL select the previous passage. Predominantly vertical and ambiguous diagonal gestures SHALL NOT change passages. Multi-touch, cancelled gestures, text selection, and gestures on controls SHALL NOT trigger passage changes. The sequence SHALL have bounded ends without wraparound. Native vertical scrolling and zoom SHALL remain available. A deliberate horizontal drag SHALL reveal an adjacent passage panel while moving the outgoing panel; qualifying release SHALL complete the slide and one navigation, while cancellation or insufficient movement SHALL return without a history change. Reduced motion SHALL suppress animated sliding.
 
 #### Scenario: Clear horizontal swipe
 - **WHEN** a deliberate leftward swipe is completed while reading Psalm 37 on day 7
@@ -29,7 +31,7 @@ A clearly horizontal leftward swipe SHALL select the next passage and a rightwar
 - **THEN** the reader remains in Proverbs 7
 
 ### Requirement: Non-gesture alternatives
-The reader SHALL provide focusable previous/next passage controls, direct passage selection, and keyboard navigation. While the reading surface is focused, ArrowLeft/ArrowRight SHALL change passages and ArrowUp/ArrowDown or PageUp/PageDown SHALL advance within the passage appropriately. Shortcuts SHALL not intercept editing, settings interaction, or native scrolling through oversized content. All navigation SHALL be available without touch gestures.
+The reader SHALL provide focusable previous/next passage controls, direct passage selection, and keyboard navigation. While the reading surface is focused, ArrowLeft/ArrowRight SHALL change passages and ArrowUp/ArrowDown or PageUp/PageDown SHALL advance within the passage appropriately. Shortcuts SHALL not intercept editing, settings interaction, selection, or native zoom. All navigation SHALL be available without touch gestures.
 
 #### Scenario: Keyboard passage change
 - **WHEN** ArrowRight is pressed with focus in the reading surface

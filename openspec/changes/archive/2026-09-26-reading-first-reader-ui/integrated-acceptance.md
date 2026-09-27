@@ -18,7 +18,7 @@ The reduced-motion Chromium settings check changed appearance, font size, densit
 
 ## Reused current-contract evidence
 
-[Archived screen-page acceptance](../archive/2026-09-26-screen-snapping-passage-transitions/integrated-acceptance.md) covers native vertical touch/wheel settling, horizontal wheel, diagonal/cancelled/multi-touch/selection exclusions, keyboard, zoom, resize continuity, sheet focus containment/Escape return, loading/access-denied/retry, reduced motion and accessibility-tree source order. It also records all five real typography benchmarks, every density, larger type and 200% text. No typography or rendering implementation changed this session, so these checks remain applicable.
+[Archived screen-page acceptance](../2026-09-26-screen-snapping-passage-transitions/integrated-acceptance.md) covers native vertical touch/wheel settling, horizontal wheel, diagonal/cancelled/multi-touch/selection exclusions, keyboard, zoom, resize continuity, sheet focus containment/Escape return, loading/access-denied/retry, reduced motion and accessibility-tree source order. It also records all five real typography benchmarks, every density, larger type and 200% text. No typography or rendering implementation changed this session, so these checks remain applicable.
 
 Hardware safe areas and dynamic Safari chrome remain unverified. WebKit is unavailable locally; physical iPhone/iPad Safari is not connected. These limitations are expressly permitted to be reported by task 4.2 and do not close the original reader's device gates. Live VoiceOver is not a gate.
 

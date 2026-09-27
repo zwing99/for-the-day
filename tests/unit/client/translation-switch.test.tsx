@@ -8,6 +8,11 @@ import {
 	waitFor,
 } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { cachedChapterSource } from "../../../src/client/cached-chapter-source.js";
+import {
+	BrowserChapterRepository,
+	memoryChapterStorage,
+} from "../../../src/client/chapter-cache.js";
 import { ChapterLoadError } from "../../../src/client/chapter-source.js";
 import { Reader } from "../../../src/client/reader.js";
 import { ReadingStorage } from "../../../src/client/reading-storage.js";
@@ -107,4 +112,25 @@ it("cancels a pending switch when passage navigation supersedes it", async () =>
 	expect(new URL(window.location.href).searchParams.get("translation")).toBe(
 		"CSB",
 	);
+});
+
+it("uses the same cache for menu switching and subsequent route loads", async () => {
+	const repository = new BrowserChapterRepository(memoryChapterStorage());
+	const get = vi.fn(async (_p, _s, context) => chapter(context.translation));
+	const source = cachedChapterSource({ get }, repository, async () => "r");
+	const storage = new ReadingStorage();
+	try {
+		render(<Reader source={source} storage={storage} report={vi.fn()} />);
+		await screen.findByRole("article", { name: "Verse 2" });
+		for (const translation of ["NIV", "CSB", "NIV"] as const) {
+			select(translation);
+			await waitFor(() =>
+				expect(storage.preferences().translation).toBe(translation),
+			);
+			expect(window.location.pathname).toBe("/23/psalm/23/2");
+		}
+		expect(get).toHaveBeenCalledTimes(2);
+	} finally {
+		repository.dispose();
+	}
 });

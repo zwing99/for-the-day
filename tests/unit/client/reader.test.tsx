@@ -9,6 +9,11 @@ import {
 } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cachedChapterSource } from "../../../src/client/cached-chapter-source.js";
+import {
+	BrowserChapterRepository,
+	memoryChapterStorage,
+} from "../../../src/client/chapter-cache.js";
 import { ChapterLoadError } from "../../../src/client/chapter-source.js";
 import { createDisplayReporter } from "../../../src/client/fums.js";
 import { Reader } from "../../../src/client/reader.js";
@@ -171,4 +176,58 @@ describe("CSB display activation", () => {
 		await screen.findByRole("button", { name: "Begin reading" });
 		expect(source.get).toHaveBeenCalledTimes(2);
 	});
+});
+
+it("cached return creates a fresh FUMS activation while retaining references and history", async () => {
+	const get = vi.fn(async (p: { book: "PSA" | "PRO"; chapter: number }) => {
+		const c = semanticFixture();
+		Object.assign(c.identity, p);
+		for (const v of c.verses) {
+			v.providerIds = v.providerIds.map((id) =>
+				id.replace("PSA.23.", `${p.book}.${p.chapter}.`),
+			);
+			v.orgIds = v.orgIds.map((id) =>
+				id.replace("PSA.23.", `${p.book}.${p.chapter}.`),
+			);
+		}
+		return c;
+	});
+	const repository = new BrowserChapterRepository(memoryChapterStorage());
+	const source = cachedChapterSource({ get }, repository, async () => "r");
+	const track = vi.fn();
+	const report = createDisplayReporter(track);
+	const view = render(<Reader source={source} report={report} />);
+	try {
+		await screen.findByRole("button", { name: "Begin reading" });
+		expect(track).not.toHaveBeenCalled();
+		fireEvent.click(screen.getByRole("button", { name: "Begin reading" }));
+		await waitFor(() => expect(track).toHaveBeenCalledTimes(1));
+		fireEvent.click(screen.getByRole("button", { name: "Psalm 53" }));
+		await screen.findByRole("button", { name: "Begin reading" });
+		expect(track).toHaveBeenCalledTimes(1);
+		fireEvent.click(screen.getByRole("button", { name: "Begin reading" }));
+		await waitFor(() => expect(track).toHaveBeenCalledTimes(2));
+		fireEvent.click(screen.getByRole("button", { name: "Psalm 23" }));
+		await screen.findByRole("button", { name: "Begin reading" });
+		expect(track).toHaveBeenCalledTimes(2);
+		fireEvent.click(screen.getByRole("button", { name: "Begin reading" }));
+		await waitFor(() => expect(track).toHaveBeenCalledTimes(3));
+		expect(get.mock.calls.map((c) => c[0].chapter)).toEqual([23, 53]);
+		expect(window.location.pathname).toContain("/psalm/23/");
+		window.dispatchEvent(new Event("focus"));
+		window.dispatchEvent(new Event("online"));
+		expect(get).toHaveBeenCalledTimes(2);
+		view.unmount();
+		window.history.replaceState(null, "", "/23/psalm/23/1a?translation=CSB");
+		render(
+			<Reader
+				source={cachedChapterSource({ get }, repository, async () => "r")}
+				report={report}
+			/>,
+		);
+		await waitFor(() => expect(track).toHaveBeenCalledTimes(4));
+		expect(get).toHaveBeenCalledTimes(2);
+	} finally {
+		repository.dispose();
+	}
 });

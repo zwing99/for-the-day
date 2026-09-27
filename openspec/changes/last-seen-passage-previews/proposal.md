@@ -7,16 +7,16 @@ Horizontal passage slides are close to the desired interaction, but their loadin
 ## What Changes
 
 - Reveal the destination's last-seen aligned page when its content is available, preserving its logical verse rather than restarting at the introduction.
-- Reuse transient chapter data for previously visited passages and warm the current day's passages in the background, current passage first, next passage second, then remaining passages sequentially.
+- Reuse chapter data through the shared cache-aware source from `browser-passage-cache` for previously visited passages and warm the current day's passages in the background, current passage first, next passage second, then remaining passages sequentially.
 - Keep loading previews as an honest fallback, never delay navigation for background work, and preserve safe recovery.
 - Keep previews inert and free of progress, history, focus, and display-reporting side effects; activate the prepared page only on commitment.
-- Preserve reference-only browser persistence and existing screen fitting, bounded navigation, gesture, and reduced-motion behavior.
+- Preserve reference-only navigation persistence and the dedicated browser chapter retention policy and existing screen fitting, bounded navigation, gesture, and reduced-motion behavior.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `last-seen-passage-navigation`: Last-seen page continuity across horizontal transitions, supported by bounded transient daily passage preparation.
+- `last-seen-passage-navigation`: Last-seen page continuity across horizontal transitions, supported by bounded daily passage preparation through the shared source.
 
 ### Modified Capabilities
 

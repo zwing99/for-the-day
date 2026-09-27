@@ -40,7 +40,10 @@ describe("chapter API", () => {
 			CSB: { get: async () => chapter },
 		}).request("/api/bible/CSB/PSA/23");
 		expect(response.status).toBe(200);
-		expect(await response.json()).toEqual({ chapter });
+		expect(await response.json()).toEqual({
+			chapter,
+			revision: "unconfigured",
+		});
 		expect(response.headers.get("Cache-Control")).toBe("no-store");
 	});
 	it.each([

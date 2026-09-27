@@ -20,7 +20,7 @@ The reader opens to today. You can choose another day, return to Today, or revis
 - Use a keyboard, select text, and zoom with familiar browser controls.
 - Share your current location or copy its link from the reader menu.
 
-CSB, NIV, NLT, and ESV are available locally with configured provider access. The built app supports installation and can open its reader shell offline; Scripture requires a connection.
+CSB, NIV, NLT, and ESV are available locally with configured provider access. The built app supports installation and can open its reader shell offline; Fresh retained chapters can reopen offline: CSB/NIV/NLT for up to 24 hours and ESV for up to one hour. Whole-chapter verse bounds, browser eviction and unavailable storage can shorten retention; missing or expired chapters require a connection.
 
 ## Try it on your computer
 

@@ -23,3 +23,11 @@ A conditional per-edition manifest bounds API.Bible storage to 400 verses, evict
 
 
 The checkpoint above records the earlier CSB milestone. Current block-8 verification and provider identity metadata are in [provider-adapters.md](provider-adapters.md). The development-only 30-day API.Bible raw-response cache lives in ignored `.local/provider-response-cache/`; `mise run cache:import-samples` seeds existing samples offline, and `mise run verify:provider-samples` validates saved NIV/NLT/ESV responses without upstream requests.
+
+## Browser chapter retention
+
+The app makes one no-store `/api/content-configuration` request at startup. Its credential-free revision hashes the configured edition identities and semantic model/normalizer revisions; metadata never calls a Scripture provider. Chapter success responses include `{ chapter, revision }` to handle configuration changes during loading. An offline reopening uses its last observed revision; discovering changed server configuration requires connectivity. Fresh visits, focus and reconnect do not refresh chapters or metadata.
+
+The dedicated versioned `for-the-day-chapters` IndexedDB database retains complete validated CSB/NIV/NLT chapters for exactly 24 hours and ESV chapters for exactly one hour from successful browser retrieval. Reads update LRU recency without extending expiry. ESV browser admission is independent of reading-day eligibility; server eligibility remains unchanged. Whole-chapter LRU admission is atomic across tabs: 400 canonical verses per API.Bible translation, or 300 total and 200 per book for ESV. Partial/merged identities count canonical coverage. Oversized chapters display completely without retention.
+
+Startup, reads/writes and active expiry timers remove expired/corrupt/incompatible records. Browsers cannot guarantee physical cleanup while closed; expired content is never served on reopening. Browser eviction, user deletion, or unavailable/quota-limited storage can shorten retention. Storage failures use a bounded session-memory fallback and do not prevent online reading. There is no corpus prefetch or durable offline guarantee. Content reuse remains separate from fresh display activation and required FUMS reporting.

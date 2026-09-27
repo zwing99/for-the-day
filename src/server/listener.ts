@@ -4,6 +4,7 @@ import { createApp } from "./app.js";
 import type { ChapterIdentity } from "./cache/chapter-repository.js";
 import { DynamoChapterRepository } from "./cache/dynamodb-chapters.js";
 import { ChapterService } from "./chapter-service.js";
+import { contentRevision } from "./content-revision.js";
 import { localDatabase } from "./local-db.js";
 import { ApiBibleProvider } from "./providers/api-bible.js";
 import { CROSSWAY_EDITION, CrosswayProvider } from "./providers/crossway.js";
@@ -66,7 +67,7 @@ const maintenance = setInterval(() => {
 }, 60000);
 maintenance.unref();
 const server = serve({
-	fetch: createApp(services).fetch,
+	fetch: createApp(services, contentRevision(identities)).fetch,
 	hostname: "127.0.0.1",
 	port,
 });

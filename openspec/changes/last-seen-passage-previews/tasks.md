@@ -1,10 +1,10 @@
 # Tasks
 
-## 1. Transient daily preparation
+## 1. Shared-source daily preparation
 
-- [ ] 1.1 Add a scope-bounded chapter pool behind the existing source boundary; verify ready/in-flight deduplication, identity checks, scope cancellation, late-result rejection, and fresh activation independent from cached content with unit tests.
-- [ ] 1.2 Add sequential current-first/next-first daily warming and foreground promotion; verify one background request, no other-day fetches, navigation joining in-flight work, rate-limit cooldown, access/configuration stop, and active-reading isolation with controlled source/timer tests; document scheduling and transient retention.
-- [ ] 1.3 Integrate the pool into active chapter loading while preserving retry and abort behavior; verify existing navigation/error/reporting tests and mise check/build pass before changing preview rendering.
+- [ ] 1.1 Use the shared cache-aware source from `browser-passage-cache` and add a scope-bounded preparation scheduler; verify ready/in-flight deduplication, identity checks, scope cancellation, late-result rejection, and fresh activation independent from cached content with unit tests.
+- [ ] 1.2 Add sequential current-first/next-first daily warming and foreground promotion; verify one background request, no other-day fetches, navigation joining in-flight work, rate-limit cooldown, access/configuration stop, and active-reading isolation with controlled source/timer tests; document scheduling and the shared source retention policy.
+- [ ] 1.3 Integrate the scheduler with shared-source active chapter loading while preserving retry and abort behavior; verify existing navigation/error/reporting tests and mise check/build pass before changing preview rendering.
 
 ## 2. Passive last-seen page presentation
 
@@ -15,4 +15,4 @@
 ## 3. Integrated acceptance and precedence
 
 - [ ] 3.1 Record intermediate, settling, and first committed frames for ready and delayed destinations on small portrait, short landscape, tablet/Split View, and desktop; exercise touch, trackpad, keyboard/menu, resize/type/density changes, native zoom, and bounded ends; use standing CSB fit references and invented packed/merged fixtures, and report unavailable Safari/device checks explicitly.
-- [ ] 3.2 Review browser storage/network/reporting to verify bounded scope and no Scripture/provider persistence or preview side effects; reconcile the earlier loading-only preview and warming restriction with this change's precedence, then run mise check/build and strict OpenSpec validation and deliver a visual checkpoint.
+- [ ] 3.2 Review browser storage/network/reporting to verify bounded scope and permitted dedicated chapter persistence, no competing pool/cache clearing, and no preview side effects; reconcile the earlier loading-only preview and warming restriction with this change's precedence, then run mise check/build and strict OpenSpec validation and deliver a visual checkpoint.

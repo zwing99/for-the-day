@@ -13,6 +13,7 @@ interface ChapterSource {
 }
 export function createApp(
 	services: Partial<Record<Translation, ChapterSource>> = {},
+	revision = "unconfigured",
 ) {
 	const app = new Hono();
 	app.use("/api/*", async (c, next) => {
@@ -20,6 +21,7 @@ export function createApp(
 		await next();
 	});
 	app.get("/api/health", (c) => c.json({ status: "ok" }));
+	app.get("/api/content-configuration", (c) => c.json({ revision }));
 	app.get("/api/bible/:translation/:book/:chapter", async (c) => {
 		const { translation, book, chapter } = c.req.param();
 		const readingDay = c.req.query("readingDay");
@@ -68,6 +70,7 @@ export function createApp(
 				503,
 			);
 		return c.json({
+			revision,
 			chapter: await service.get(
 				{
 					book: book as Passage["book"],

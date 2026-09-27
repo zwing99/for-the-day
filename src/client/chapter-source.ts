@@ -4,6 +4,7 @@ import {
 	type Translation,
 	validateSemanticChapter,
 } from "../domain/semantic-chapter.js";
+export const chapterRevisions = new WeakMap<SemanticChapter, string>();
 export class ChapterLoadError extends Error {
 	constructor(
 		public readonly code: string,
@@ -107,6 +108,8 @@ export const networkChapterSource: ChapterSource = {
 				"normalization",
 				"The requested chapter could not be verified.",
 			);
+		if (typeof body.revision === "string" && body.revision)
+			chapterRevisions.set(body.chapter, body.revision);
 		return body.chapter;
 	},
 };

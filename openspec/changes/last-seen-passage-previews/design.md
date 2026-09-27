@@ -8,13 +8,13 @@ See proposal.md for motivation. `reader.tsx` currently fetches on active key cha
 
 **Goals:** Reuse chapter content independently from activation, prepare saved-page geometry before revelation, and keep background work subordinate to active navigation.
 
-**Non-Goals:** Persistent/offline Scripture, preloading other days or editions, provider expansion, new dependencies, changes to server cache/TTL, or retaining a mounted chapter for every daily passage.
+**Non-Goals:** Defining persistent/offline Scripture policy (owned by `browser-passage-cache`), preloading other days or editions, provider expansion, new dependencies, changes to server cache/TTL, or retaining a mounted chapter for every daily passage.
 
 ## Decisions
 
-### Bounded transient chapter pool
+### Shared chapter source and bounded preparation scheduler
 
-Add a small source-facing session pool keyed by translation/book/chapter plus reading-day/time-zone context (and validated edition identity on results). Hold ready chapters and in-flight promises only for the current scope. Current request first; after usable content, warm next then remaining plan sequentially. Foreground navigation promotes/joins its request, aborting unrelated background work when necessary. Use existing abortable `ChapterSource` and safe errors; reject obsolete generation results even if an adapter ignores abort. On scope change clear retained chapters. Background failures remain separate from active errors; rate limits pause scheduling for the supplied delay (existing 60-second fallback), and access/configuration errors stop scope warming. No automatic retry loop for failed warming; a foreground attempt retains normal recovery.
+Use the single cache-aware `ChapterSource` composed by `browser-passage-cache` for foreground and background loads. That source owns fixed freshness, persistence, bounded admission and compatible in-flight sharing. This scheduler owns only current-scope warming priority and cancellation; it must not maintain a competing chapter pool/freshness policy or clear reusable chapters on day/translation changes. Current request first; after usable content, warm next then remaining plan sequentially. Foreground navigation promotes/joins its compatible request, aborting unrelated background subscribers when necessary. Reject obsolete generation results even if an adapter ignores abort. On scope change cancel obsolete preparation/activation, preserving the source cache. Background failures remain separate from active errors; rate limits pause scheduling for the supplied delay (existing 60-second fallback), and access/configuration errors stop scope warming. No automatic retry loop for failed warming; a foreground attempt retains normal recovery.
 
 An adjacent-only pool was considered but would repeat requests and leave later daily swipes cold. Parallel full-day loading was rejected because it competes with foreground reading and increases rate-limit bursts. This proposal intentionally replaces the preceding design's prohibition on warming the bounded daily plan, without authorizing corpus prefetch.
 
@@ -35,11 +35,11 @@ Implement after `screen-snapping-passage-transitions` 4.X acceptance. This chang
 ## Risks / Trade-offs
 
 - [Ready data with unfinished fitting can flash the wrong page] → Keep placeholder until passive layout resolves; verify intermediate and immediately committed frames.
-- [Transient provider metadata reused across visits] → Separate data from fresh activation ids; preserve current reporting policy and metadata without persistent storage.
+- [Transient provider metadata reused across visits] → Separate data from fresh activation ids; preserve current reporting policy and metadata under the dedicated browser retention policy.
 - [Background failures or stale promises affect active reading] → Separate scheduler errors, validate identities, and enforce generation checks and foreground priority.
 - [Many hidden mounted chapters waste work] → Mount only active and revealed neighbor; keep the bounded plan as transient data.
 - [Invalid or stale saved anchors] → Use the existing safe route validation/recovery policy; never silently rewrite Scripture identity.
 
 ## Migration Plan
 
-No persisted schema or API migration. Add pool tests first, then passive presentation and commitment integration, then browser acceptance. Rollback can return to loading previews and active fetches while keeping existing saved references intact. Planning only in this change creation; no implementation is authorized yet.
+Use the shared source and revision/storage policy from `browser-passage-cache`; this preview change adds no separate persisted schema or API migration. Add scheduler tests first, then passive presentation and commitment integration, then browser acceptance. Rollback can return to loading previews and active fetches while keeping existing saved references intact. Planning only in this change creation; no implementation is authorized yet.

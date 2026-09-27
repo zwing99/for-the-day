@@ -17,6 +17,7 @@ import {
 	verseCards,
 } from "../domain/card-packing.js";
 import type { SemanticChapter } from "../domain/semantic-chapter.js";
+import { measureChapterPacking } from "./measured-packing.js";
 import { minimumFittingScale } from "./page-fitting.js";
 import { interactiveTarget } from "./passage-gesture.js";
 import { ChapterCards } from "./semantic-renderer.js";
@@ -90,6 +91,7 @@ export function ReadingSurface({
 	const [budget, setBudget] = useState({ columns: 28, lines: 16 });
 	const [surfaceSize, setSurfaceSize] = useState({ width: 0, height: 0 });
 	const [fontRevision, setFontRevision] = useState(0);
+	const [labelRevision, setLabelRevision] = useState(0);
 	const [layoutOverride, setLayoutOverride] = useState<{
 		key: string;
 		cards: PackedCard[];
@@ -98,7 +100,7 @@ export function ReadingSurface({
 		key: string;
 		scales: Record<string, number>;
 	}>();
-	const layoutKey = `${chapter.identity.editionKey}:${chapter.identity.book}:${chapter.identity.chapter}:${density}:${fontSize}:${fontRevision}:${budget.columns}x${budget.lines}:${surfaceSize.width}x${surfaceSize.height}`;
+	const layoutKey = `${chapter.identity.editionKey}:${chapter.identity.book}:${chapter.identity.chapter}:${density}:${fontSize}:${fontRevision}:${labelRevision}:${budget.columns}x${budget.lines}:${surfaceSize.width}x${surfaceSize.height}`;
 	const baseCards = useMemo(
 		() => packChapter(chapter, density, budget),
 		[chapter, density, budget],
@@ -211,10 +213,48 @@ export function ReadingSurface({
 			window.removeEventListener("resize", resize);
 		};
 	}, [fontSize]);
+	useEffect(() => {
+		const element = content.current;
+		const surface = element?.closest("main");
+		if (!element || !surface || !surfaceSize.height) return;
+		let disposed = false;
+		const timer = setTimeout(() => {
+			if (disposed) return;
+			const measured = measureChapterPacking(
+				chapter,
+				density,
+				surface,
+				element,
+			);
+			if (!disposed && measured) {
+				setLayoutOverride({ key: layoutKey, cards: measured });
+				setFitOverride({ key: layoutKey, scales: {} });
+			}
+		}, 0);
+		return () => {
+			disposed = true;
+			clearTimeout(timer);
+		};
+	}, [chapter, density, layoutKey, surfaceSize.height]);
+	useEffect(() => {
+		const shell = content.current?.closest(".reader-shell");
+		if (!shell) return;
+		const observer = new MutationObserver(() =>
+			setLabelRevision((value) => value + 1),
+		);
+		observer.observe(shell, {
+			attributes: true,
+			attributeFilter: ["data-verse-labels"],
+		});
+		return () => observer.disconnect();
+	}, []);
 	useLayoutEffect(() => {
 		const element = content.current;
 		const surface = element?.closest("main");
 		if (!element || !surface || !surface.clientHeight) return;
+		// Do overflow splitting/fitting only after candidate selection has committed
+		// for this revision. This prevents an estimate-based intermediate packing.
+		if (layoutOverride?.key !== layoutKey) return;
 		const articles = [...element.querySelectorAll<HTMLElement>(".verse-card")];
 		if (articles.length !== cards.length) return;
 		const overflowingKeys = new Set<string>();
@@ -269,7 +309,15 @@ export function ReadingSurface({
 			JSON.stringify(fitOverride.scales) !== JSON.stringify(nextScales)
 		)
 			setFitOverride({ key: layoutKey, scales: nextScales });
-	}, [chapter, cards, atomicCards, layoutKey, fontScaleKey, fitOverride]);
+	}, [
+		chapter,
+		cards,
+		atomicCards,
+		layoutKey,
+		layoutOverride,
+		fontScaleKey,
+		fitOverride,
+	]);
 	const restoring = useRef(false);
 	const callbacks = useRef({ onLocation, onReady });
 	callbacks.current = { onLocation, onReady };

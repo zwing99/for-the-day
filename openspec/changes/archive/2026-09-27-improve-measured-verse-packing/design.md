@@ -43,3 +43,7 @@ Use Playwright MCP to inspect localhost, in addition to automated Chromium/WebKi
 ## Migration Plan
 
 Capture offline baselines, implement and test candidate policy, integrate measured settlement, then compare corpus and responsive results. No persisted-state migration is required. Rollback is limited to this change's packing/measurement edits and preserves references and preferences. Record completed checks and remaining coverage in verification.md before claiming acceptance.
+
+### Natural-group tie-break
+
+When the current page already contains at least two complete units and the next natural paragraph or stanza fits by itself within the target, prefer moving that group whole to a fresh page if its first unit would fit on the current page but the full group would not. A one-unit page continues growing whenever the next compatible unit fits, so this preference cannot preserve an avoidable singleton. New section headings and unknown structures remain hard boundaries. This tie-break makes natural breaks useful while keeping the measurable rule deterministic.

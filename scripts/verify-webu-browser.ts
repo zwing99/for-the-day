@@ -219,6 +219,48 @@ for (const [name, engine] of [
 		await assertReaderGeometry(page);
 		strictEqual(await page.getByRole("alert").count(), 0);
 		strictEqual(apiRequests, beforeWebu, "WEBU recovery makes no API requests");
+
+		// A settled measured page must retain the addressed verse while typography,
+		// labels, font readiness, zoom-like root size and viewport geometry change.
+		await page.setViewportSize({ width: 390, height: 844 });
+		await page.goto(`${origin}/23/psalm/23/4?translation=WEBU`);
+		await settledReader(page);
+		await page.getByRole("button", { name: "Open reader menu" }).click();
+		await page
+			.getByRole("combobox", { name: "Density" })
+			.selectOption("Balanced");
+		await page
+			.getByRole("combobox", { name: "Font size" })
+			.selectOption("larger");
+		await page.getByRole("checkbox", { name: "Verse numbers" }).uncheck();
+		await page.keyboard.press("Escape");
+		await page.evaluate(() => {
+			document.fonts.dispatchEvent(new Event("loadingdone"));
+			document.documentElement.style.fontSize = "20px";
+			window.dispatchEvent(new Event("resize"));
+		});
+		await page.setViewportSize({ width: 400, height: 850 });
+		await settledReader(page);
+		await assertReaderGeometry(page);
+		strictEqual(
+			await page
+				.locator("[data-active-verse]")
+				.getAttribute("data-active-verse"),
+			"PSA.23.4",
+		);
+		strictEqual(
+			await page.evaluate(() => {
+				const prefs = JSON.parse(
+					localStorage.getItem("for-the-day:v1:preferences") ?? "{}",
+				);
+				return (
+					prefs.density === "Balanced" &&
+					prefs.fontSize === "larger" &&
+					prefs.verseLabels === false
+				);
+			}),
+			true,
+		);
 		strictEqual(errors.length, 0);
 		console.log(
 			`${name}: WEBU reload, keyboard/touch, loading, retry and licensed translation return passed; zero external Scripture requests`,

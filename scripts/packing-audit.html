@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Offline packing audit</title>
+ </head>
+ <body>
+  <div class="reader-shell" data-verse-labels="true">
+   <header class="reader-context"><p>Offline packing audit</p></header>
+   <main class="reading-scroll"><div id="audit-reader"></div></main>
+   <footer class="passage-indicators"><button type="button" aria-label="Audit page">•</button></footer>
+   <div id="audit-candidate" inert aria-hidden="true" style="position: fixed; left: -10000px; visibility: hidden"></div>
+  </div>
+  <script type="module" src="../src/client/packing-audit.tsx"></script>
+ </body>
+</html>

@@ -139,3 +139,11 @@ run = "bun x --no-install vite preview"
 [tasks."webu:update"]
 description = "Check upstream WEBU updates and regenerate local assets with footnotes removed"
 run = "node scripts/webu-corpus.mjs update"
+
+[tasks."audit:verse-packing"]
+description = "Audit rendered packing using invented fixtures and cached CSB responses only (dev:web first)"
+run = ["bun build scripts/audit-verse-packing.ts --target=node --packages=external --outfile=.local/verification/audit-verse-packing.mjs", "node .local/verification/audit-verse-packing.mjs"]
+
+[tasks."audit:webu-packing"]
+description = "Audit rendered packing across all pinned WEBU chapters without provider access (dev:web first)"
+run = ["bun build scripts/audit-verse-packing.ts --target=node --packages=external --outfile=.local/verification/audit-verse-packing.mjs", "node .local/verification/audit-verse-packing.mjs --webu"]

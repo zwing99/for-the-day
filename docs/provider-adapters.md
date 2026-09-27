@@ -1,6 +1,6 @@
 # Provider adapters and development verification
 
-The local listener wires CSB, NIV, and NLT to their configured API.Bible edition IDs and ESV to Crossway. Provider credentials and interpretation stay on the server. An unconfigured edition returns a safe configuration error without preventing another configured edition from working. The reader menu switches all four translations while preserving the active day, passage, and logical verse.
+The local listener wires CSB, NIV, and NLT to their configured API.Bible edition IDs and ESV to Crossway. Provider credentials and interpretation stay on the server. An unconfigured edition returns a safe configuration error without preventing another configured edition from working. The reader menu switches these licensed translations and static WEBU while preserving the active day, passage, and logical verse. WEBU bypasses these server adapters and uses pinned same-origin assets; it has no tracking and unverified cross-edition mappings remain approximate.
 
 API.Bible uses whole-chapter JSON and retains source attributes, exact text, organizational identities, attribution, and V3 FUMS metadata. The second normalizer revision explicitly recognizes `cl` chapter titles, `qa` acrostic divisions, and `li1`–`li3` indented literary lines observed in the saved NIV/NLT responses. Chapter cache keys isolate editions and normalizer revisions. The ignored 30-day raw-response development cache survives those revisions, so re-normalization does not require another upstream request.
 

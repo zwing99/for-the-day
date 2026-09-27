@@ -90,3 +90,17 @@ it("does not use a sparse first-verse Crossway bridge to reset an unmapped verse
 		});
 	}
 });
+
+it("keeps WEBU correspondences approximate in both directions", () => {
+	const source = semanticFixture(),
+		target = semanticFixture();
+	target.identity.translation = "WEBU";
+	target.identity.provider = "static";
+	for (const verse of target.verses) verse.orgIds = [];
+	expect(
+		mapTranslationLocation(source, source.verses[1]!, target),
+	).toMatchObject({ verse: { key: "b" }, approximate: true });
+	expect(
+		mapTranslationLocation(target, target.verses[1]!, source),
+	).toMatchObject({ verse: { key: "b" }, approximate: true });
+});

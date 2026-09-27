@@ -13,7 +13,7 @@ mise run setup
 mise run dev
 ```
 
-Setup installs the Bun lockfile, creates `.env` only if absent, starts DynamoDB Local, and initializes its table. Existing credentials are preserved. No AWS account is needed. API.Bible edition IDs depend on your account's CSB/NIV/NLT access; Crossway uses a separate key. Never put these secrets in `VITE_*` variables. Missing credentials will remain an explicit setup error rather than supply bundled Scripture.
+Setup installs the Bun lockfile, creates `.env` only if absent, starts DynamoDB Local, and initializes its table. Existing credentials are preserved. No AWS account is needed. API.Bible edition IDs depend on your account's CSB/NIV/NLT access; Crossway uses a separate key. Never put these secrets in `VITE_*` variables. Missing licensed-provider credentials remain an explicit recovery error; WEBU uses its separate static source.
 
 The frontend binds to `127.0.0.1:5173` and proxies `/api` to the Hono listener on `127.0.0.1:8787`. DynamoDB Local binds to `127.0.0.1:8000`. Override ports in `.env`; keep `DYNAMODB_ENDPOINT` aligned with `DYNAMODB_PORT`. The server only accepts a loopback database endpoint and uses fixed dummy credentials.
 
@@ -79,7 +79,7 @@ The built preview includes the installable static shell. See [PWA behavior and v
 
 Local development reuses raw API.Bible responses from `.local/provider-response-cache/` for 30 days. This directory is Git-ignored and responses survive normalizer changes. The local listener and CSB inspection task consult it before upstream requests. Import existing samples with `mise run cache:import-samples`; layout verification uses this cache without falling back to live provider calls. New interactive chapter requests can still use API quota on a cache miss. ESV retains its separate bounded cache policy.
 
-Raw provider responses belong only in ignored `.local/provider-samples/`. Commit invented-text fixtures rather than copyrighted Scripture or credentials. Use `test:integration` for isolated DynamoDB checks and `smoke:csb` for opt-in live checks while dev runs; browser verification works through the standalone Playwright MCP.
+Raw provider responses belong only in ignored `.local/provider-samples/`. Commit invented-text fixtures rather than licensed Scripture or credentials. Pinned public-domain WEBU sources/assets are the documented exception. Use `test:integration` for isolated DynamoDB checks and `smoke:csb` for opt-in live checks while dev runs; browser verification works through the standalone Playwright MCP.
 
 ## Verification record
 
@@ -92,3 +92,35 @@ Block 1 command-surface verification: `mise tasks` lists the documented tasks; `
 The pinned tools install, frozen dependency installation, typechecks, health unit test, formatting/lint, production build, Node 24 API execution, and Vite health proxy have passed. DynamoDB Local start/init/repeated-init/stop and fresh temporary-table creation through the AWS CLI container have passed. The temporary table was removed afterward. The standalone Playwright MCP has verified the CSB milestone on phone/tablet layouts, exact text/attribution, and cached-token FUMS reporting. The earlier in-app Browser plugin failure remains separate; future interaction/PWA gates are still pending.
 
 The semantic chapter model and initial mocked CSB adapter are documented in [docs/scripture-model.md](scripture-model.md). The adapter is connected to the CSB milestone page; authenticated CSB text/structure fidelity verification has passed for four representative chapters. Rendered fidelity remains a later gate.
+
+## Static WEBU development and verification
+
+WEBU (World English Bible Updated) provides pinned public-domain Psalms and Proverbs without provider credentials, an API listener or DynamoDB. CSB remains the initial preference. For a database-free session:
+
+```sh
+mise install
+mise run install
+mise run dev:web
+# Open http://localhost:5173/23/psalm/23/4?translation=WEBU
+```
+
+For the production frontend, run `mise run build`, then `mise run preview:static`, and open the same WEBU link on port 4173. These tasks do not start Docker or the API. Licensed editions still require their configured services and retain their existing storage limits.
+
+```sh
+mise run webu:update       # Explicit upstream check; regenerate with footnotes removed
+mise run webu:refresh      # Source-only upstream refresh, if reviewing the source first
+mise run webu:generate     # Deterministic offline generation from pinned extracts
+mise run webu:verify       # Offline source checksums and generated-asset integrity
+BROWSER_EDITION=WEBU mise run test:browser
+VERSE_FIT_EDITION=WEBU mise run verify:verse-fit
+```
+
+Only `webu:update` and `webu:refresh` download Scripture. Unchanged book extracts and license leave provenance unchanged; an update regenerates revisioned assets and removes the preceding generated revision. Review the source/provenance/asset diff before committing an update. Footnote annotations are omitted on every generation, with surrounding Scripture retained exactly; pinned original XML remains intact. See [source provenance and fixture exception](../corpus/webu/README.md). Builds and tests use committed assets and never refresh upstream.
+
+The WEBU browser suite uses actual static assets, blocks external requests, and supplies invented CSB only when testing translation return. It runs in Chromium and WebKit against either dev:web or preview:static (`WEB_PORT=4173`). Verse-fit mode uses the actual Reader, all 181 pinned chapters, and a full matrix of seven viewport sizes, all densities, all type preferences, and 16px/20px root sizes (larger-root zoom/type stress). Reports contain references and geometry only, including attached-heading maxima, available space, selected/effective type, page-local shrinking and complete fit. The report defaults to `.local/verification/webu-fit.json`; set `VERSE_FIT_REPORT` to change it. Do not edit frontend code during the scan because Vite reloads the measurement page. Physical iPhone/iPad and actual pinch zoom remain manual checks; root enlargement is an automated stress approximation.
+
+The default `verify:verse-fit` edition remains CSB and its API.Bible access remains cache-only. `VERSE_FIT_SCOPE=benchmarks` retains the five standing CSB regressions; WEBU maxima never replace them. Missing or expired CSB samples fail without downloading replacements.
+
+The static corpus is approximately 21.85 MB uncompressed (1.85 MB summed gzip), with chapter payloads between 12.98 kB and 1.02 MB. The initial build is approximately 24.28 MB including the API bundle and existing shell assets. Browser reading requests only a manifest and the requested chapter; session reuse is bounded to six chapters. The shell service worker does not precache or intercept Scripture JSON. Offline WEBU reading requires assets already available through browser HTTP caching; installing the shell does not install the entire corpus.
+
+WEBU implementation checkpoint: `mise run check` passes 258 tests; production build and offline corpus integrity pass. The [WEBU verification record](../openspec/changes/archive/2026-09-27-add-static-webu-edition/verification.md) and [geometry report](../openspec/changes/archive/2026-09-27-add-static-webu-edition/verse-fit-report.json) cover all 181 chapters across 126 scenarios. The browser suite separately checks exact source-order text, actual scrolling/touch handlers, retry, translation return and initial CSB failure recovery in Chromium/WebKit. Shared user API/database services are left untouched; static-only verification blocks their routes and exercises storage-unavailable boundaries.

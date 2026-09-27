@@ -8,6 +8,7 @@
         "@aws-sdk/client-dynamodb": "3.1141.0",
         "@aws-sdk/lib-dynamodb": "3.1141.0",
         "@hono/node-server": "2.1.1",
+        "@smithy/core": "3.35.0",
         "@smithy/node-http-handler": "4.12.1",
         "hono": "4.13.9",
         "parse5": "8.0.1",

@@ -196,7 +196,7 @@ export function Reader({
 	}, [key, source, attempt]);
 	const chapter = result?.key === key ? result.chapter : undefined;
 	async function switchTranslation(translation: Translation) {
-		if (!route || !chapter || translation === route.translation) return;
+		if (!route || translation === route.translation) return;
 		switchRequest.current?.abort();
 		const controller = new AbortController();
 		switchRequest.current = controller;
@@ -210,11 +210,22 @@ export function Reader({
 			});
 			if (controller.signal.aborted) return;
 			const anchor = current.current ?? location ?? route;
-			const sourceVerse = routeVerse(chapter, anchor) ?? chapter.verses[0]!;
+			const sourceVerse = chapter
+				? (routeVerse(chapter, anchor) ?? chapter.verses[0]!)
+				: undefined;
 			const mapped =
-				anchor.location === "intro"
+				anchor.location === "intro" ||
+				(!chapter && !anchor.location && preferencesRef.current.intros)
 					? undefined
-					: mapTranslationLocation(chapter, sourceVerse, nextChapter);
+					: chapter && sourceVerse
+						? mapTranslationLocation(chapter, sourceVerse, nextChapter)
+						: {
+								verse:
+									nextChapter.verses.find(
+										(verse) => verse.displayLabel === anchor.location,
+									) ?? nextChapter.verses[0]!,
+								approximate: !!anchor.location,
+							};
 			const next = {
 				...anchor,
 				translation,
@@ -222,6 +233,7 @@ export function Reader({
 				orgIds: mapped?.verse.orgIds,
 			};
 			navigate(next);
+			setError(undefined);
 			setResult({
 				chapter: nextChapter,
 				key: identity(next),
@@ -382,8 +394,10 @@ export function Reader({
 							`Loading ${switching}… You can keep reading.`
 						) : switchFailure ? (
 							<>
-								{switchFailure.error.message} Your current translation remains
-								available.
+								{switchFailure.error.message}{" "}
+								{chapter
+									? "Your current translation remains available."
+									: "Choose another translation or try again."}
 								<button
 									disabled={!switchRetryReady}
 									onClick={() =>

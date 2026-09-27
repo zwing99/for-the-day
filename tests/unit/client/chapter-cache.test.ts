@@ -143,3 +143,17 @@ it("removes expired content on the active timer without a read", async () => {
 	await vi.advanceTimersByTimeAsync(3600000);
 	expect(await storage.update((s) => s.entries.length)).toBe(0);
 });
+
+it("does not admit static WEBU or access licensed storage for its lookup", async () => {
+	const update = vi.fn();
+	const repository = repo({ update });
+	const chapter = semanticFixture();
+	chapter.identity.translation = "WEBU";
+	chapter.identity.provider = "static";
+	chapter.tracking = { kind: "none" };
+	await repository.put(chapter, "static-revision");
+	expect(
+		await repository.get(chapter.identity, "WEBU", "static-revision"),
+	).toBeUndefined();
+	expect(update).not.toHaveBeenCalled();
+});

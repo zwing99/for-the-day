@@ -10,7 +10,7 @@ import {
 import { type BibleProvider, ProviderError } from "./provider.js";
 
 interface Options {
-	translation?: Exclude<Translation, "ESV">;
+	translation?: Exclude<Translation, "ESV" | "WEBU">;
 	apiKey?: string;
 	bibleId?: string;
 	fetch?: typeof fetch;
@@ -116,7 +116,7 @@ export function normalizeApiBibleChapter(
 	raw: unknown,
 	passage: Passage,
 	bibleId: string,
-	translation: Exclude<Translation, "ESV"> = "CSB",
+	translation: Exclude<Translation, "ESV" | "WEBU"> = "CSB",
 ): SemanticChapter {
 	const envelope = object(raw);
 	const data = object(envelope.data);

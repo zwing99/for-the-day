@@ -119,3 +119,23 @@ run = ["bun build scripts/verify-browser.ts --target=node --packages=external --
 [tasks."smoke:csb"]
 description = "Opt-in real CSB API/cache/React smoke test (dev and saved samples required)"
 run = "bun x --no-install vitest run tests/manual/csb-smoke.test.tsx"
+
+[tasks."webu:refresh"]
+description = "Explicitly download WEBU USFX and refresh pinned public-domain extracts; review before generation"
+run = "node scripts/webu-corpus.mjs refresh"
+
+[tasks."webu:generate"]
+description = "Generate WEBU static chapters deterministically from pinned extracts without network"
+run = "node scripts/webu-corpus.mjs generate"
+
+[tasks."webu:verify"]
+description = "Verify pinned WEBU sources and all generated static assets offline"
+run = "node scripts/webu-corpus.mjs verify"
+
+[tasks."preview:static"]
+description = "Serve the production frontend without API or database (build first)"
+run = "bun x --no-install vite preview"
+
+[tasks."webu:update"]
+description = "Check upstream WEBU updates and regenerate local assets with footnotes removed"
+run = "node scripts/webu-corpus.mjs update"

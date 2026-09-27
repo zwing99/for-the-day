@@ -1,0 +1,15 @@
+{
+  "edition": "engwebu",
+  "translation": "WEBU",
+  "label": "World English Bible Updated",
+  "publicDomain": true,
+  "sourceUrl": "https://ebible.org/Scriptures/engwebu_usfx.zip",
+  "editionUrl": "https://ebible.org/find/show.php?id=engwebu",
+  "retrievedAt": "2026-09-27T18:32:04.992Z",
+  "archiveSha256": "3d4de2ad3e35277fcb79d9928125aa209a1afed2cbffdb9c594de35299ca3000",
+  "extracts": {
+    "PSA": "9ac060fd36c7b4d69b352d3ea19ee2e73061a4e6c2d0f2e74ce3ad18bd74f844",
+    "PRO": "cfb313e312ff8a58eb2d1dfe86ac1c78b381561cd70d24f557be07ebdd1d041b"
+  },
+  "licenseSha256": "784ac59bf105cf7d11c23b06cb77e41b90e41ab389940b71c27a853ef055fcb5"
+}

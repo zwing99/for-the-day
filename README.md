@@ -20,9 +20,11 @@ The reader opens to today. You can choose another day, return to Today, or revis
 - Use a keyboard, select text, and zoom with familiar browser controls.
 - Share your current location or copy its link from the reader menu.
 
-CSB, NIV, NLT, and ESV are available locally with configured provider access. The built app supports installation and can open its reader shell offline; Fresh retained chapters can reopen offline: CSB/NIV/NLT for up to 24 hours and ESV for up to one hour. Whole-chapter verse bounds, browser eviction and unavailable storage can shorten retention; missing or expired chapters require a connection.
+WEBU (World English Bible Updated) is available from bundled public-domain Psalms and Proverbs without credentials or a database. CSB, NIV, NLT, and ESV are available locally with configured provider access. The built app supports installation and can open its reader shell offline; Fresh retained chapters can reopen offline: CSB/NIV/NLT for up to 24 hours and ESV for up to one hour. Whole-chapter verse bounds, browser eviction and unavailable storage can shorten retention; missing or expired chapters require a connection.
 
 ## Try it on your computer
+
+To try WEBU without Docker or provider credentials, run `mise install`, `mise run install`, then `mise run dev:web`. Open [Psalm 23 in WEBU](http://localhost:5173/23/psalm/23/4?translation=WEBU), or choose WEBU in settings. `mise run webu:update` checks for upstream updates and regenerates the corpus with footnotes removed. Source refresh is always explicit; ordinary reading, builds and tests never download Scripture.
 
 You'll need [mise](https://mise.jdx.dev/), Docker Desktop running, and API.Bible access to the CSB translation.
 

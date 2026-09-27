@@ -1,6 +1,6 @@
 # URLs and reader navigation
 
-Routes are `/`, `/:day`, `/:day/psalm/:chapter`, and `/:day/proverbs/:chapter`, with optional `/intro` or a provider's printed verse label. Shared canonical links include `?translation=CSB` (or NIV/NLT/ESV), with repeated `org` identity parameters when supplied. Partial and range labels remain strings. Invalid syntax, outside-plan chapters and absent fetched verse labels produce recovery rather than clamping.
+Routes are `/`, `/:day`, `/:day/psalm/:chapter`, and `/:day/proverbs/:chapter`, with optional `/intro` or a provider's printed verse label. Shared canonical links include `?translation=CSB` (or NIV/NLT/ESV/WEBU), with repeated `org` identity parameters when supplied. Partial and range labels remain strings. Invalid syntax, outside-plan chapters and absent fetched verse labels produce recovery rather than clamping.
 
 Root chooses today's local day once. Day-only routes may restore that day's active-passage hint. Explicit URL locations override saved passage locations; saved locations override intro/first-verse defaults. Versioned guarded storage holds only logical URLs and preferences, with session-memory fallback. Each day/passage has an independent location; no Scripture objects are persisted.
 

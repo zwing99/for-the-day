@@ -15,3 +15,9 @@ On 2026-09-26, authenticated v2 requests succeeded for CSB Psalms 23, 3, and 119
 Observed structures include nested verse-span wrappers, q1 and unnumbered q continuation lines, d superscriptions, s1/s2 headings, empty b stanza separators, and nd/sup/qs/qac/tl inline styles. These now have invented-text regression coverage. Unnumbered q uses zero indentation; q1–q4 retain their numeric indentation. Verse spans retain membership and become inline groups. Superscripts, italic title/poetic markers, and acrostic marks survive normalization. No material architecture correction was needed.
 
 Run `direnv exec . mise run inspect:csb` only for an intentional live-provider review. `mise run verify:csb-samples` checks existing ignored responses without network requests. Rendered fidelity and cached FUMS reporting remain later verification gates.
+
+## Static WEBU identity
+
+WEBU uses `provider: "static"`, `providerBibleId: "engwebu"`, `editionKey: "engwebu"` and `tracking: { kind: "none" }`. Supplied USFX verse markers define source keys and indexes; `orgIds` remain empty because organizational equivalence with licensed editions is unverified. Static loading checks the build-pinned manifest checksum, corpus revision, chapter checksum and semantic schema/identity before display. It bypasses licensed metadata and retention storage.
+
+The pinned public-domain USFX extracts and actual generated chapter assets are allowed test data. Footnote annotation subtrees are intentionally excluded from generated reader content by user direction; source extracts remain unchanged. Text after an annotation remains exact. Book titles attach to chapter one; chapter titles, poetry lines/indentation and word/inline source metadata remain in the semantic tree. All other unknown chapter markup fails generation. Source refresh is an explicit mise task; see [the corpus README](../corpus/webu/README.md).

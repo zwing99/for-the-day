@@ -1,3 +1,4 @@
+import { staticWebuSource } from "./static-webu-source.js";
 import type { SemanticChapter } from "../domain/semantic-chapter.js";
 import {
 	BrowserChapterRepository,
@@ -147,6 +148,19 @@ export function cachedChapterSource(
 }
 
 export function browserChapterSource(): ChapterSource {
+	const staticSource = staticWebuSource();
+	let licensed: ChapterSource | undefined;
+	return {
+		get(passage, signal, context) {
+			if (context?.translation === "WEBU")
+				return staticSource.get(passage, signal, context);
+			licensed ??= licensedBrowserChapterSource();
+			return licensed.get(passage, signal, context);
+		},
+	};
+}
+
+function licensedBrowserChapterSource(): ChapterSource {
 	let storage;
 	try {
 		storage = indexedChapterStorage();

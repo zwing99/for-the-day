@@ -22,6 +22,7 @@ describe("chapter API", () => {
 		"CSB/PSA/1.5",
 		"CSB/PSA/01",
 		"OTHER/PSA/23",
+		"WEBU/PSA/23",
 		"CSB/GEN/1",
 		"CSB/PSA/23?readingDay=32",
 		"CSB/PSA/23?timeZone=bad-zone",

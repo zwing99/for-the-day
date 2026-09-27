@@ -5,6 +5,13 @@ import { orderedText } from "../src/domain/semantic-chapter.js";
 import { ApiBibleProvider } from "../src/server/providers/api-bible.js";
 import { localResponseCache } from "../src/server/providers/local-response-cache.js";
 
+if (process.env.VERSE_FIT_EDITION === "WEBU") {
+	await import("./verify-webu-fit.js");
+	process.exit(0);
+}
+if (process.env.VERSE_FIT_EDITION && process.env.VERSE_FIT_EDITION !== "CSB")
+	throw new Error("Use VERSE_FIT_EDITION=CSB or WEBU.");
+
 // Benchmark mode finishes after the bounded, cached-only regression matrix.
 if (process.env.VERSE_FIT_SCOPE === "benchmarks") {
 	await import("./verify-verse-fit-benchmarks.js");

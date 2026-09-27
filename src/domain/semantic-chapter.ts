@@ -1,6 +1,6 @@
 import type { Book } from "./reading-plan.js";
 
-export type Translation = "CSB" | "NIV" | "NLT" | "ESV";
+export type Translation = "CSB" | "NIV" | "NLT" | "ESV" | "WEBU";
 export interface SourceInfo {
 	path: string;
 	tag?: string;
@@ -57,7 +57,7 @@ export interface SemanticChapter {
 		translation: Translation;
 		book: Book;
 		chapter: number;
-		provider: "api-bible" | "crossway";
+		provider: "api-bible" | "crossway" | "static";
 		providerBibleId: string;
 		editionKey: string;
 	};
@@ -132,10 +132,12 @@ export function validateSemanticChapter(
 	const chapter = record(value);
 	if (chapter.schemaVersion !== 1) fail();
 	const identity = record(chapter.identity);
-	oneOf(identity.translation, ["CSB", "NIV", "NLT", "ESV"]);
+	oneOf(identity.translation, ["CSB", "NIV", "NLT", "ESV", "WEBU"]);
 	oneOf(identity.book, ["PSA", "PRO"]);
 	integer(identity.chapter, 1, identity.book === "PSA" ? 150 : 31);
-	oneOf(identity.provider, ["api-bible", "crossway"]);
+	oneOf(identity.provider, ["api-bible", "crossway", "static"]);
+	if ((identity.translation === "WEBU") !== (identity.provider === "static"))
+		fail();
 	if ((identity.translation === "ESV") !== (identity.provider === "crossway"))
 		fail();
 	for (const field of [

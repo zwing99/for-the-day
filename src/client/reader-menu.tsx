@@ -177,7 +177,7 @@ export function ReaderMenu({
 								}
 							>
 								<option value="CSB">CSB</option>
-								{["NIV", "NLT", "ESV"].map((value) => (
+								{["NIV", "NLT", "ESV", "WEBU"].map((value) => (
 									<option key={value} value={value}>
 										{value}
 									</option>

@@ -122,6 +122,7 @@ export class BrowserChapterRepository {
 				validateSemanticChapter(entry.chapter);
 				const identity = entry.chapter.identity;
 				if (
+					identity.provider === "static" ||
 					entry.revision !== state.revision ||
 					typeof state.revision !== "string" ||
 					!state.revision ||
@@ -212,6 +213,7 @@ export class BrowserChapterRepository {
 		translation: Translation,
 		revision: string,
 	): Promise<SemanticChapter | undefined> {
+		if (translation === "WEBU") return Promise.resolve(undefined);
 		return this.update((s) => {
 			if (s.revision !== revision) return undefined;
 			const entry = s.entries.find((e) => e.key === key(passage, translation));
@@ -226,6 +228,11 @@ export class BrowserChapterRepository {
 		allowed: () => boolean = () => true,
 		signal?: AbortSignal,
 	): Promise<void> {
+		if (
+			chapter.identity.provider === "static" ||
+			chapter.identity.translation === "WEBU"
+		)
+			return Promise.resolve();
 		return this.update((s) => {
 			if (!allowed() || s.revision !== revision) return;
 			validateSemanticChapter(chapter);

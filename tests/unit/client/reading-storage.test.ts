@@ -92,3 +92,23 @@ it("persists only whitelisted references and preferences across repository insta
 	});
 	expect([...records.values()].join()).not.toContain("must not persist");
 });
+
+it("restores WEBU preferences and shared verse routes across reloads while keeping CSB defaults", () => {
+	const records = new Map<string, string>();
+	const port = {
+		getItem: (key: string) => records.get(key) ?? null,
+		setItem: (key: string, value: string) => {
+			records.set(key, value);
+		},
+	};
+	const store = new ReadingStorage(port);
+	expect(store.preferences().translation).toBe("CSB");
+	store.setPreferences({ ...store.preferences(), translation: "WEBU" });
+	const shared = parseReaderRoute(
+		new URL("http://localhost/23/psalm/23/4?translation=WEBU"),
+	);
+	store.savePosition(shared);
+	const reloaded = new ReadingStorage(port);
+	expect(reloaded.preferences().translation).toBe("WEBU");
+	expect(reloaded.position(shared)).toEqual(shared);
+});

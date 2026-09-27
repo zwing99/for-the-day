@@ -52,7 +52,7 @@ export class ReadingStorage {
 			"fontSize",
 		] as const) {
 			const allowed = {
-				translation: ["CSB", "NIV", "NLT", "ESV"],
+				translation: ["CSB", "NIV", "NLT", "ESV", "WEBU"],
 				density: ["Spacious", "Balanced", "Compact"],
 				appearance: ["system", "light", "dark"],
 				fontSize: ["normal", "large", "larger"],

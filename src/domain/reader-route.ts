@@ -8,7 +8,7 @@ export interface ReaderRoute extends Passage {
 	orgIds?: string[];
 }
 export class RouteError extends Error {}
-const translations = ["CSB", "NIV", "NLT", "ESV"];
+const translations = ["CSB", "NIV", "NLT", "ESV", "WEBU"];
 const label = /^(?:0|[1-9]\d*)(?:[a-z])?(?:-(?:0|[1-9]\d*)(?:[a-z])?)?$/;
 
 export function parseReaderRoute(

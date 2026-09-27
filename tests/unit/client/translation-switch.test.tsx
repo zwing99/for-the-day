@@ -39,8 +39,8 @@ function select(value: Translation) {
 function chapter(translation: Translation) {
 	const c = semanticFixture();
 	c.identity.translation = translation;
-	if (translation === "ESV") {
-		c.identity.provider = "crossway";
+	if (translation === "ESV" || translation === "WEBU") {
+		c.identity.provider = translation === "WEBU" ? "static" : "crossway";
 		c.tracking = { kind: "none" };
 		for (const v of c.verses) v.orgIds = [];
 	}
@@ -51,7 +51,7 @@ it("switches all editions at the current location, persists success, and marks u
 	const get = vi.fn(async (_p, _s, context) => chapter(context.translation));
 	render(<Reader source={{ get }} storage={storage} report={vi.fn()} />);
 	await screen.findByRole("article", { name: "Verse 2" });
-	for (const t of ["NIV", "NLT", "ESV", "CSB"] as const) {
+	for (const t of ["NIV", "NLT", "ESV", "WEBU", "CSB"] as const) {
 		select(t);
 		await waitFor(() =>
 			expect(
@@ -60,12 +60,12 @@ it("switches all editions at the current location, persists success, and marks u
 		);
 		expect(window.location.pathname).toBe("/23/psalm/23/2");
 		expect(storage.preferences().translation).toBe(t);
-		if (t === "ESV")
+		if (t === "ESV" || t === "WEBU")
 			expect(screen.getByRole("status").textContent).toContain(
 				"Approximate verse match",
 			);
 	}
-	expect(get).toHaveBeenCalledTimes(5);
+	expect(get).toHaveBeenCalledTimes(6);
 });
 it("keeps successful content and URL usable after a failed switch and retries without a history rollback", async () => {
 	const get = vi
@@ -87,32 +87,35 @@ it("keeps successful content and URL usable after a failed switch and retries wi
 	fireEvent.click(screen.getByRole("button", { name: "Retry translation" }));
 	await waitFor(() => expect(storage.preferences().translation).toBe("NLT"));
 });
-it("cancels a pending switch when passage navigation supersedes it", async () => {
-	let resolve: (value: ReturnType<typeof chapter>) => void = () => {};
-	let signal: AbortSignal | undefined;
-	const get = vi.fn(async (p, s, context) => {
-		if (context.translation === "NLT") {
-			signal = s;
-			return new Promise<ReturnType<typeof chapter>>((r) => {
-				resolve = r;
-			});
-		}
-		const c = chapter("CSB");
-		c.identity.chapter = p.chapter;
-		return c;
-	});
-	render(<Reader source={{ get }} report={vi.fn()} />);
-	await screen.findByRole("article", { name: "Verse 2" });
-	select("NLT");
-	fireEvent.click(screen.getByRole("button", { name: "Psalm 53" }));
-	await screen.findByRole("button", { name: /Begin reading/ });
-	expect(signal?.aborted).toBe(true);
-	await act(async () => resolve(chapter("NLT")));
-	expect(window.location.pathname).toContain("/psalm/53");
-	expect(new URL(window.location.href).searchParams.get("translation")).toBe(
-		"CSB",
-	);
-});
+it.each(["NLT", "WEBU"] as const)(
+	"cancels a pending %s switch when passage navigation supersedes it",
+	async (translation) => {
+		let resolve: (value: ReturnType<typeof chapter>) => void = () => {};
+		let signal: AbortSignal | undefined;
+		const get = vi.fn(async (p, s, context) => {
+			if (context.translation === translation) {
+				signal = s;
+				return new Promise<ReturnType<typeof chapter>>((r) => {
+					resolve = r;
+				});
+			}
+			const c = chapter("CSB");
+			c.identity.chapter = p.chapter;
+			return c;
+		});
+		render(<Reader source={{ get }} report={vi.fn()} />);
+		await screen.findByRole("article", { name: "Verse 2" });
+		select(translation);
+		fireEvent.click(screen.getByRole("button", { name: "Psalm 53" }));
+		await screen.findByRole("button", { name: /Begin reading/ });
+		expect(signal?.aborted).toBe(true);
+		await act(async () => resolve(chapter(translation)));
+		expect(window.location.pathname).toContain("/psalm/53");
+		expect(new URL(window.location.href).searchParams.get("translation")).toBe(
+			"CSB",
+		);
+	},
+);
 
 it("uses the same cache for menu switching and subsequent route loads", async () => {
 	const repository = new BrowserChapterRepository(memoryChapterStorage());
@@ -134,3 +137,36 @@ it("uses the same cache for menu switching and subsequent route loads", async ()
 		repository.dispose();
 	}
 });
+
+it.each(["failed", "pending"])(
+	"opens WEBU when initial CSB is %s and ignores its late response",
+	async (state) => {
+		let completeCsb: (value: ReturnType<typeof chapter>) => void = () => {};
+		let csbSignal: AbortSignal | undefined;
+		const get = vi.fn(async (_passage, signal, context) => {
+			if (context.translation === "WEBU") return chapter("WEBU");
+			csbSignal = signal;
+			if (state === "failed")
+				throw new ChapterLoadError("configuration", "Configure the provider.");
+			return new Promise<ReturnType<typeof chapter>>((resolve) => {
+				completeCsb = resolve;
+			});
+		});
+		const storage = new ReadingStorage();
+		render(<Reader source={{ get }} storage={storage} report={vi.fn()} />);
+		if (state === "failed") await screen.findByRole("alert");
+		else await waitFor(() => expect(get).toHaveBeenCalledTimes(1));
+		select("WEBU");
+		await waitFor(() => expect(storage.preferences().translation).toBe("WEBU"));
+		expect(window.location.pathname).toBe("/23/psalm/23/2");
+		expect(screen.getByRole("status").textContent).toContain(
+			"Approximate verse match",
+		);
+		expect(csbSignal?.aborted).toBe(true);
+		await act(async () => completeCsb(chapter("CSB")));
+		expect(new URL(window.location.href).searchParams.get("translation")).toBe(
+			"WEBU",
+		);
+		expect(screen.getByRole("article", { name: "Verse 2" })).toBeTruthy();
+	},
+);

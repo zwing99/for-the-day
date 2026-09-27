@@ -22,6 +22,35 @@ describe("semantic chapter contract", () => {
 			"Copper wheels turn!",
 		]);
 	});
+	it("accepts only the edition's designated provider and keeps static content untracked", () => {
+		for (const translation of ["CSB", "NIV", "NLT", "ESV", "WEBU"] as const) {
+			for (const provider of ["api-bible", "crossway", "static"] as const) {
+				const chapter = semanticFixture();
+				chapter.identity.translation = translation;
+				chapter.identity.provider = provider;
+				chapter.tracking = { kind: "none" };
+				const expected =
+					translation === "WEBU"
+						? "static"
+						: translation === "ESV"
+							? "crossway"
+							: "api-bible";
+				if (provider === expected)
+					expect(() => validateSemanticChapter(chapter)).not.toThrow();
+				else
+					expect(() => validateSemanticChapter(chapter)).toThrow(
+						"Invalid semantic chapter.",
+					);
+			}
+		}
+		const chapter = semanticFixture();
+		chapter.identity.translation = "WEBU";
+		chapter.identity.provider = "static";
+		expect(() => validateSemanticChapter(chapter)).toThrow(
+			"Invalid semantic chapter.",
+		);
+	});
+
 	it("extracts complete split verses and indivisible merged spans without copying text", () => {
 		const units = completeVerseUnits(semanticFixture());
 		expect(units.map((unit) => unit.verseKeys)).toEqual([

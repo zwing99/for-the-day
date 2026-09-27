@@ -45,7 +45,7 @@ While reading, a subtle passage identifier SHALL remain near the top without ove
 - **THEN** the passage identifier and active indicator orient the reader without taking precedence over Scripture
 
 ### Requirement: Settings and persistent preferences
-Settings SHALL provide Today, day selection, passage/day restart, CSB/NIV/NLT/ESV selection, system/light/dark appearance, font size, Spacious/Balanced/Compact density, intros on/off, and verse numbers on/off. Initial preferences SHALL be CSB, Balanced, system appearance, normal font size, intros on, and verse numbers on. Preferences SHALL persist across reloads through a small storage boundary. Hiding verse numbers SHALL affect labels only. Invalid or unavailable storage SHALL fall back to valid defaults without breaking reading. Font selection SHALL remain replaceable without changing Scripture or location contracts.
+Settings SHALL provide Today, day selection, passage/day restart, CSB/NIV/NLT/ESV/WEBU selection, system/light/dark appearance, font size, Spacious/Balanced/Compact density, intros on/off, and verse numbers on/off. Initial preferences SHALL be CSB, Balanced, system appearance, normal font size, intros on, and verse numbers on. Preferences SHALL persist across reloads through a small storage boundary. Hiding verse numbers SHALL affect labels only. Invalid or unavailable storage SHALL fall back to valid defaults without breaking reading. Font selection SHALL remain replaceable without changing Scripture or location contracts.
 
 #### Scenario: Preference restoration
 - **WHEN** NLT, Compact, dark appearance, larger type, and intros off are selected and the application reloads
@@ -58,6 +58,10 @@ Settings SHALL provide Today, day selection, passage/day restart, CSB/NIV/NLT/ES
 #### Scenario: Corrupt persistence
 - **WHEN** saved preferences contain malformed or unsupported values
 - **THEN** valid preferences are retained where possible and invalid values use defaults
+
+#### Scenario: WEBU selection and location
+- **WHEN** WEBU is selected, shared at a verse location, and reopened from the link or saved preference
+- **THEN** WEBU remains selected and the requested logical location opens using static Scripture assets
 
 ### Requirement: Accessible mobile and desktop behavior
 The reader SHALL use semantic content and controls, meaningful accessible names, visible focus, contrast meeting WCAG AA for text, and touch targets of at least 44 CSS pixels for primary interactive controls. It SHALL honor reduced motion, text zoom, pinch zoom, iPhone/iPad safe areas, dynamic browser viewports, portrait/landscape and Split View changes, and desktop input. Settings SHALL manage focus on open/close and support keyboard dismissal. Screen readers SHALL encounter Scripture in literary order without repeated forced announcements while scrolling. Context SHALL remain legible despite its subtle visual treatment.

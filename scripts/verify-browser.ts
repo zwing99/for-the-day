@@ -3,6 +3,11 @@ import { chromium, webkit } from "playwright";
 import { semanticFixture } from "../tests/fixtures/semantic-chapter.js";
 import { assertReaderGeometry, settledReader } from "./reader-geometry.js";
 
+if (process.env.BROWSER_EDITION === "WEBU") {
+	await import("./verify-webu-browser.js");
+	process.exit(0);
+}
+
 const origin = `http://127.0.0.1:${process.env.WEB_PORT ?? 5173}`;
 for (const [name, engine] of [
 	["Chromium", chromium],

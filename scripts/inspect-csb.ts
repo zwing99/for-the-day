@@ -1,6 +1,10 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { orderedText } from "../src/domain/semantic-chapter.js";
-import { normalizeApiBibleChapter } from "../src/server/providers/api-bible.js";
+import {
+	apiBibleChapterUrl,
+	normalizeApiBibleChapter,
+} from "../src/server/providers/api-bible.js";
+import { localResponseCache } from "../src/server/providers/local-response-cache.js";
 
 const apiKey = process.env.API_BIBLE_KEY;
 const bibleId = process.env.API_BIBLE_CSB_ID;
@@ -8,6 +12,7 @@ if (!apiKey || !bibleId)
 	throw new Error(
 		"Configure API_BIBLE_KEY and API_BIBLE_CSB_ID before inspecting CSB.",
 	);
+const cachedFetch = localResponseCache();
 await mkdir(".local/provider-samples", { recursive: true, mode: 0o700 });
 for (const passage of [
 	{ book: "PSA", chapter: 23 },
@@ -15,21 +20,10 @@ for (const passage of [
 	{ book: "PSA", chapter: 119 },
 	{ book: "PRO", chapter: 7 },
 ] as const) {
-	const url = new URL(
-		`https://v2.api.bible/bibles/${encodeURIComponent(bibleId)}/chapters/${passage.book}.${passage.chapter}`,
-	);
-	for (const [key, value] of Object.entries({
-		"content-type": "json",
-		"include-notes": "false",
-		"include-titles": "true",
-		"include-chapter-numbers": "false",
-		"include-verse-numbers": "true",
-		"include-verse-spans": "true",
-	}))
-		url.searchParams.set(key, value);
+	const url = apiBibleChapterUrl(passage, bibleId);
 	let response: Response;
 	try {
-		response = await fetch(url, {
+		response = await cachedFetch(url, {
 			headers: { "api-key": apiKey },
 			redirect: "error",
 			signal: AbortSignal.timeout(15000),

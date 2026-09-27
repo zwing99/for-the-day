@@ -1,0 +1,15 @@
+# Block 8 verification — partial
+
+Implementation is uncommitted. Tasks 8.2, 8.4, and 8.5 are verified; the remaining block-8 gates remain open.
+
+Crossway whole-chapter HTML is parsed through the existing parse5 dependency, now pinned as a runtime dependency. Numeric verse anchors remain provider identities, without manufactured organizational IDs. Headings, Psalm titles, acrostic divisions, poetry lines, indentation, inline semantics, and required notices are preserved. Mock tests include invented 176-verse/22-division content.
+
+ESV reads and writes require complete reading-day/time-zone context, chapter membership, and circular eligibility evaluated from the repository clock. Missing or ineligible context bypasses cache. One conditional ESV manifest spans normalizer revisions; admission bounds storage to 300 total verses and 200 per book. Maintenance physically removes expired, incompatible, and newly ineligible chapters. Fifteen isolated DynamoDB integration tests passed, including concurrent admission and repeated requests. The full Docker-independent check passed with 184 tests.
+
+Configured NIV/NLT requests and representative ignored responses were inspected. Additional API.Bible styles require explicit mappings: `cl` chapter titles, `qa` acrostic headings, and `li1`–`li3` indented list lines. The normalizer revision was increased to 2 to prevent old normalized data satisfying new requests. Verification of this final revision is incomplete.
+
+An initial Playwright corpus measurement covered 181 chapters and 3,376 indexed verses in each of NIV, NLT, and ESV with normalized-to-rendered text conservation. This was before the final API.Bible style mappings. Crossway's tallest attached-heading benchmark was Psalm 57:1. At a 320×568 reader viewport, the page had 524px available height and required scale 0.9436, yielding 16.4534px effective type and 491.515625px literature height. This violates the repository's default portrait benchmark requirement of no page-local shrinking. The fit gate remains open; no exception has been accepted.
+
+The user raised a provider quota concern during a second corpus scan. Both verification browser contexts were closed immediately. Bounded-cache eviction and a normalizer revision made repeated scans incur substantial new upstream requests. No further bulk live-provider verification is authorized without an explicitly approved request budget. Continue using mocks and the permitted ignored representative samples; ESV samples must remain within provider storage bounds. Do not repeat live corpus scans merely to reproduce geometry.
+
+The user subsequently authorized a Git-ignored 30-day local-development response cache. API.Bible responses now use `.local/provider-response-cache/` independently of normalizer revisions. Twelve existing samples were imported without upstream access. `verify:verse-fit` now uses only this cache and stops on misses; repeated cache imports are idempotent. ESV remains on its separately bounded policy. The change's cache spec and design record this development exception; full-corpus verification remains incomplete.

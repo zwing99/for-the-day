@@ -1,6 +1,7 @@
 import type { Passage } from "../domain/reading-plan.js";
 import type { SemanticChapter } from "../domain/semantic-chapter.js";
 import type {
+	CacheContext,
 	ChapterIdentity,
 	ChapterRepository,
 } from "./cache/chapter-repository.js";
@@ -12,17 +13,22 @@ export class ChapterService {
 		private readonly repository: ChapterRepository,
 		private readonly identity: Omit<ChapterIdentity, "book" | "chapter">,
 	) {}
-	get(passage: Passage): Promise<SemanticChapter> {
+	get(passage: Passage, context?: CacheContext): Promise<SemanticChapter> {
 		const identity = { ...this.identity, ...passage };
-		const key = JSON.stringify(identity);
+		const key = JSON.stringify([identity, context]);
 		const pending = this.pending.get(key);
 		if (pending) return pending;
-		const request = this.load(identity).finally(() => this.pending.delete(key));
+		const request = this.load(identity, context).finally(() =>
+			this.pending.delete(key),
+		);
 		this.pending.set(key, request);
 		return request;
 	}
-	private async load(identity: ChapterIdentity): Promise<SemanticChapter> {
-		const cached = await this.repository.get(identity);
+	private async load(
+		identity: ChapterIdentity,
+		context?: CacheContext,
+	): Promise<SemanticChapter> {
+		const cached = await this.repository.get(identity, context);
 		if (cached) return cached;
 		const chapter = await this.provider.fetchChapter({
 			book: identity.book,
@@ -31,7 +37,8 @@ export class ChapterService {
 		for (const key of Object.keys(identity) as Array<keyof ChapterIdentity>)
 			if (identity[key] !== chapter.identity[key])
 				throw new Error("Chapter identity mismatch.");
-		await this.repository.put(chapter);
+		if (context) await this.repository.put(chapter, context);
+		else await this.repository.put(chapter);
 		return chapter;
 	}
 }

@@ -67,9 +67,12 @@ Use `mise tasks` to discover the command surface. Package scripts do not duplica
 | `test:integration` | Isolated cache tests; start DynamoDB Local first |
 | `smoke:csb` | Opt-in real-provider smoke test; requires credentials, saved samples, and dev |
 | `inspect:csb`, `verify:csb-samples` | Save ignored provider samples, then verify their fidelity offline |
-| `verify:verse-fit` | Opt-in full-corpus layout measurement; requires the local API and Chrome |
+| `cache:import-samples` | Import saved API.Bible samples into the 30-day development cache without network requests |
+| `verify:verse-fit` | Offline layout measurement from cached responses; requires Vite and Chrome and stops on cache misses |
 
 Cache/API behavior and the latest verification checkpoint are in [docs/chapter-api-cache.md](docs/chapter-api-cache.md).
+
+Local development reuses raw API.Bible responses from `.local/provider-response-cache/` for 30 days. This directory is Git-ignored and responses survive normalizer changes. The local listener and CSB inspection task consult it before upstream requests. Import existing samples with `mise run cache:import-samples`; layout verification uses this cache without falling back to live provider calls. New interactive chapter requests can still use API quota on a cache miss. ESV retains its separate bounded cache policy.
 
 Raw provider responses belong only in ignored `.local/provider-samples/`. Commit invented-text fixtures rather than copyrighted Scripture or credentials. Use `test:integration` for isolated DynamoDB checks and `smoke:csb` for opt-in live checks while dev runs; browser verification works through the standalone Playwright MCP.
 

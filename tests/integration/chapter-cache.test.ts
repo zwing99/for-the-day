@@ -224,3 +224,200 @@ describe("DynamoDB whole-chapter repository", () => {
 		).toBe(4);
 	});
 });
+
+function esv(chapterNumber = 23, book: "PSA" | "PRO" = "PSA", count = 3) {
+	const c = fixture("esv-tests");
+	c.identity = {
+		translation: "ESV",
+		provider: "crossway",
+		providerBibleId: "esv",
+		editionKey: "esv-tests",
+		book,
+		chapter: chapterNumber,
+	};
+	c.tracking = { kind: "none" };
+	c.introTitleNodeIds = [];
+	c.verses = Array.from({ length: count }, (_, i) => ({
+		key: `v${i + 1}`,
+		displayLabel: String(i + 1),
+		providerIds: [`invented-${i + 1}`],
+		orgIds: [],
+		sourceOrdinal: i,
+		fragmentNodeIds: [`n${i + 1}`],
+	}));
+	c.nodes = c.verses.map((v) => ({
+		id: v.fragmentNodeIds[0]!,
+		kind: "text",
+		text: `Invented verse ${v.displayLabel}.`,
+		verseKeys: [v.key],
+		marks: [],
+		source: { path: v.fragmentNodeIds[0]! },
+	}));
+	return c;
+}
+describe("ESV context and atomic bounds", () => {
+	const context = (readingDay: number, timeZone = "UTC") => ({
+		readingDay,
+		timeZone,
+	});
+	beforeEach(async () => {
+		now = Date.parse("2026-09-23T12:00:00Z");
+		// ESV has one shared manifest across revisions. Clear only this test namespace.
+		const { Items = [] } = await client.send(
+			new ScanCommand({ TableName: table, ConsistentRead: true }),
+		);
+		const { DeleteCommand } = await import("@aws-sdk/lib-dynamodb");
+		for (const item of Items.filter((i) => i.pk.includes("crossway")))
+			await client.send(
+				new DeleteCommand({ TableName: table, Key: { pk: item.pk } }),
+			);
+	});
+	it("bypasses reads/writes without complete context, outside the plan, or beyond the circular boundary", async () => {
+		const c = esv();
+		const repo = repository();
+		await repo.put(c, context(23));
+		for (const ctx of [undefined, context(17), context(24)]) {
+			expect(await repo.get(c.identity, ctx)).toBeUndefined();
+			expect(await repo.put(c, ctx)).toBe(false);
+			let calls = 0;
+			const service = new ChapterService(
+				{
+					fetchChapter: async () => {
+						calls++;
+						return c;
+					},
+				},
+				repo,
+				c.identity,
+			);
+			expect(await service.get(c.identity, ctx)).toEqual(c);
+			expect(calls).toBe(1);
+		}
+		const service = new ChapterService(
+			{
+				fetchChapter: async () => {
+					throw Error("Unexpected provider access");
+				},
+			},
+			repo,
+			c.identity,
+		);
+		expect(await service.get(c.identity, context(23))).toEqual(c);
+	});
+	it("uses the server instant in the supplied zone, including wrap and February on the 31-position cycle", async () => {
+		const repo = repository();
+		const c = esv(119);
+		now = Date.parse("2026-02-28T23:30:00Z");
+		expect(await repo.put(c, context(31))).toBe(true);
+		expect(await repo.get(c.identity, context(29))).toEqual(c);
+		now = Date.parse("2026-03-01T00:30:00Z");
+		expect(await repo.get(c.identity, context(31, "America/Chicago"))).toEqual(
+			c,
+		);
+		expect(await repo.get(c.identity, context(29))).toEqual(c);
+		const wrap = esv(3);
+		expect(await repo.put(wrap, context(3))).toBe(true);
+		now = Date.parse("2026-03-30T12:00:00Z");
+		expect(await repo.put(wrap, context(3))).toBe(true);
+		expect(await repo.get(esv(5).identity, context(5))).toBeUndefined();
+	});
+	it("physically prunes newly ineligible and incompatible-edition entries", async () => {
+		const repo = repository();
+		const c = esv();
+		await repo.put(c, context(23));
+		now = Date.parse("2026-09-30T12:00:00Z");
+		await repo.maintain(c.identity, context(30));
+		expect(
+			(
+				await client.send(
+					new GetCommand({
+						TableName: table,
+						Key: { pk: chapterKey(c.identity) },
+					}),
+				)
+			).Item,
+		).toBeUndefined();
+		const changed = esv(30);
+		await repo.put(changed, context(30));
+		await repo.maintain(
+			{ ...changed.identity, editionKey: "new-normalizer" },
+			context(30),
+		);
+		expect(
+			(
+				await client.send(
+					new GetCommand({
+						TableName: table,
+						Key: { pk: chapterKey(changed.identity) },
+					}),
+				)
+			).Item,
+		).toBeUndefined();
+	});
+	it("enforces per-book and total budgets with complete oldest eviction and metadata retention", async () => {
+		const repo = repository();
+		const a = esv(23, "PSA", 150);
+		const b = esv(24, "PSA", 100);
+		const c = esv(23, "PRO", 150);
+		await repo.put(a, context(23));
+		now++;
+		await repo.put(b, context(24));
+		expect(await repo.get(a.identity, context(23))).toBeUndefined();
+		expect(await repo.get(b.identity, context(24))).toEqual(b);
+		now++;
+		await repo.put(c, context(23));
+		expect(await repo.get(c.identity, context(23))).toEqual(c);
+		const d = esv(25, "PSA", 150);
+		now++;
+		await repo.put(d, context(25));
+		expect(await repo.get(b.identity, context(24))).toBeUndefined();
+		expect(await repo.get(d.identity, context(25))).toEqual(d);
+		expect(await repo.get(c.identity, context(23))).toEqual(c);
+	});
+	it("concurrent repeated day requests cannot grow beyond either budget", async () => {
+		const repo = repository();
+		const chapters = [
+			esv(23, "PSA", 120),
+			esv(24, "PSA", 120),
+			esv(23, "PRO", 120),
+		];
+		await Promise.all(
+			chapters.map((c) => repo.put(c, context(c.identity.chapter))),
+		);
+		const item = (
+			await client.send(
+				new GetCommand({
+					TableName: table,
+					Key: { pk: "chapter:1:crossway:manifest" },
+				}),
+			)
+		).Item!;
+		expect(
+			item.entries.reduce(
+				(n: number, e: { verses: number }) => n + e.verses,
+				0,
+			),
+		).toBeLessThanOrEqual(300);
+		for (const book of ["PSA", "PRO"])
+			expect(
+				item.entries
+					.filter((e: { book: string }) => e.book === book)
+					.reduce((n: number, e: { verses: number }) => n + e.verses, 0),
+			).toBeLessThanOrEqual(200);
+		for (let i = 0; i < 4; i++) await repo.put(chapters[0]!, context(23));
+		const again = (
+			await client.send(
+				new GetCommand({
+					TableName: table,
+					Key: { pk: "chapter:1:crossway:manifest" },
+				}),
+			)
+		).Item!;
+		expect(
+			again.entries.reduce(
+				(n: number, e: { verses: number }) => n + e.verses,
+				0,
+			),
+		).toBeLessThanOrEqual(300);
+	});
+});

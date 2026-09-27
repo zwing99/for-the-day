@@ -85,3 +85,22 @@ export function observedCsbFixture() {
 	];
 	return fixture;
 }
+
+/** Additional structures observed in NIV/NLT Psalms and NIV Proverbs. */
+export function observedNivNltFixture() {
+	const fixture = apiBibleFixture();
+	fixture.data.content = [
+		tag("para", "cl", [run("Invented chapter title")]),
+		tag("para", "qa", [run("Invented division")]),
+		tag("para", "li1", [
+			tag("verse", "v", [run("1")], { number: "1", sid: "PSA 23:1" }),
+			run("Amber list line.", "PSA.23.1"),
+		]),
+		tag("para", "li2", [run("Indented continuation.", "PSA.23.1")]),
+		tag("para", "li3", [
+			tag("verse", "v", [run("2")], { number: "2", sid: "PSA 23:2" }),
+			run("Copper list line.", "PSA.23.2"),
+		]),
+	];
+	return fixture;
+}

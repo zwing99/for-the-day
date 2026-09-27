@@ -3,12 +3,14 @@ import {
 	type SemanticChapter,
 	type SemanticNode,
 	type SourceInfo,
+	type Translation,
 	type VerseIdentity,
 	validateSemanticChapter,
 } from "../../domain/semantic-chapter.js";
 import { type BibleProvider, ProviderError } from "./provider.js";
 
 interface Options {
+	translation?: Exclude<Translation, "ESV">;
 	apiKey?: string;
 	bibleId?: string;
 	fetch?: typeof fetch;
@@ -33,7 +35,23 @@ function ids(value: unknown): string[] {
 	return value;
 }
 
-/** CSB whole chapters using API.Bible v2 and V3 view metadata. */
+export function apiBibleChapterUrl(passage: Passage, bibleId: string): URL {
+	const url = new URL(
+		`https://v2.api.bible/bibles/${encodeURIComponent(bibleId)}/chapters/${passage.book}.${passage.chapter}`,
+	);
+	for (const [key, value] of Object.entries({
+		"content-type": "json",
+		"include-notes": "false",
+		"include-titles": "true",
+		"include-chapter-numbers": "false",
+		"include-verse-numbers": "true",
+		"include-verse-spans": "true",
+	}))
+		url.searchParams.set(key, value);
+	return url;
+}
+
+/** Configured API.Bible whole chapters using API.Bible v2 and V3 view metadata. */
 export class ApiBibleProvider implements BibleProvider {
 	constructor(private readonly options: Options) {}
 	async fetchChapter(
@@ -49,18 +67,7 @@ export class ApiBibleProvider implements BibleProvider {
 			passage.chapter > (passage.book === "PSA" ? 150 : 31)
 		)
 			throw new ProviderError("not-found");
-		const url = new URL(
-			`https://v2.api.bible/bibles/${encodeURIComponent(this.options.bibleId)}/chapters/${passage.book}.${passage.chapter}`,
-		);
-		for (const [key, value] of Object.entries({
-			"content-type": "json",
-			"include-notes": "false",
-			"include-titles": "true",
-			"include-chapter-numbers": "false",
-			"include-verse-numbers": "true",
-			"include-verse-spans": "true",
-		}))
-			url.searchParams.set(key, value);
+		const url = apiBibleChapterUrl(passage, this.options.bibleId);
 		let response: Response;
 		try {
 			response = await (this.options.fetch ?? fetch)(url, {
@@ -94,6 +101,7 @@ export class ApiBibleProvider implements BibleProvider {
 				await response.json(),
 				passage,
 				this.options.bibleId,
+				this.options.translation ?? "CSB",
 			);
 		} catch (error) {
 			if (signal?.aborted)
@@ -108,6 +116,7 @@ export function normalizeApiBibleChapter(
 	raw: unknown,
 	passage: Passage,
 	bibleId: string,
+	translation: Exclude<Translation, "ESV"> = "CSB",
 ): SemanticChapter {
 	const envelope = object(raw);
 	const data = object(envelope.data);
@@ -239,9 +248,9 @@ export function normalizeApiBibleChapter(
 					source,
 				};
 			}
-			const title = /^(d|mt\d*|ms\d*)$/.test(style ?? "");
-			const heading = /^(s\d*|sr|r)$/.test(style ?? "");
-			const poetry = /^q([1-4])?$/.exec(style ?? "");
+			const title = /^(d|cl|mt\d*|ms\d*)$/.test(style ?? "");
+			const heading = /^(s\d*|sr|r|qa)$/.test(style ?? "");
+			const poetry = /^(?:q|li)([1-4])?$/.exec(style ?? "");
 			let role: Extract<SemanticNode, { kind: "group" }>["role"] = "unknown";
 			if (title) role = "title";
 			else if (heading) role = "heading";
@@ -281,11 +290,11 @@ export function normalizeApiBibleChapter(
 	const chapter: SemanticChapter = {
 		schemaVersion: 1,
 		identity: {
-			translation: "CSB",
+			translation,
 			...passage,
 			provider: "api-bible",
 			providerBibleId: bibleId,
-			editionKey: `api-bible-v2:${bibleId}:normalizer-1`,
+			editionKey: `api-bible-v2:${bibleId}:normalizer-2`,
 		},
 		reference: text(data.reference),
 		nodes: walk(data.content, "content"),
@@ -293,7 +302,7 @@ export function normalizeApiBibleChapter(
 		introTitleNodeIds: titleIds,
 		attribution: {
 			notice: text(data.copyright),
-			translationLabel: "CSB",
+			translationLabel: translation,
 			requiredLinks: [],
 		},
 		tracking: {

@@ -6,6 +6,17 @@ Reduce repeated provider fetches with a local server-side chapter cache that pre
 
 ## ADDED Requirements
 
+### Requirement: Local-development provider response reuse
+The local development listener and API.Bible inspection tools SHALL reuse successful raw API.Bible responses from Git-ignored `.local/provider-response-cache/` for up to 30 days. Response identity SHALL include provider edition and request options and SHALL remain independent of normalizer revisions. Credentials SHALL NOT be stored in response records. Failed upstream responses SHALL NOT be persisted. Offline corpus verification SHALL stop on a missing or expired response without making an upstream request. Existing local samples MAY seed this cache without network access using their original saved timestamps. This user-approved development exception permits reuse of source responses older than the chapter repository's 24-hour freshness interval; it SHALL NOT extend ESV's eligibility or storage bounds or introduce persistent browser Scripture caching.
+
+#### Scenario: Normalizer revision
+- **WHEN** an API.Bible response was saved less than 30 days ago and its normalizer changes
+- **THEN** the new normalizer consumes the saved raw response without another upstream request
+
+#### Scenario: Offline verification miss
+- **WHEN** offline corpus verification needs a missing or expired saved response
+- **THEN** verification stops with cache guidance without consuming provider quota
+
 ### Requirement: Whole-chapter cache identity and integrity
 The local API SHALL use DynamoDB Local for its server-side cache. Cache identity SHALL isolate translation, book, and chapter and invalidate incompatible model or provider-edition revisions. Cached data SHALL represent a complete normalized chapter, including attribution, formatting, IDs, and FUMS metadata. User preferences and reading positions SHALL NOT be stored in DynamoDB.
 

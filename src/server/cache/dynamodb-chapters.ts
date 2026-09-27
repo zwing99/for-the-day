@@ -6,10 +6,17 @@ import {
 	type TransactWriteCommandInput,
 } from "@aws-sdk/lib-dynamodb";
 import {
+	currentLocalDay,
+	eligibleReadingDay,
+	esvCacheEligible,
+	readingPlan,
+} from "../../domain/reading-plan.js";
+import {
 	type SemanticChapter,
 	validateSemanticChapter,
 } from "../../domain/semantic-chapter.js";
 import {
+	type CacheContext,
 	CacheError,
 	type ChapterIdentity,
 	type ChapterRepository,
@@ -17,6 +24,8 @@ import {
 
 interface Entry {
 	pk: string;
+	book?: "PSA" | "PRO";
+	chapter?: number;
 	verses: number;
 	retrievedAt: number;
 	expiresAt: number;
@@ -36,11 +45,16 @@ export const CHAPTER_TTL_MS = 86400000;
 export function cacheNamespace(identity: ChapterIdentity): string {
 	return `chapter:1:${JSON.stringify([identity.provider, identity.translation, identity.providerBibleId, identity.editionKey])}`;
 }
+function manifestKey(identity: ChapterIdentity): string {
+	return identity.provider === "crossway"
+		? "chapter:1:crossway:manifest"
+		: `${cacheNamespace(identity)}:manifest`;
+}
 export function chapterKey(identity: ChapterIdentity): string {
 	return `${cacheNamespace(identity)}:${identity.book}:${identity.chapter}`;
 }
 
-/** Whole API.Bible chapters and a conditional per-edition capacity manifest. */
+/** Whole provider chapters and a conditional per-edition capacity manifest. */
 export class DynamoChapterRepository implements ChapterRepository {
 	private readonly clock: () => number;
 	private readonly budget: number;
@@ -59,8 +73,40 @@ export class DynamoChapterRepository implements ChapterRepository {
 		)
 			throw new CacheError();
 	}
-	async get(identity: ChapterIdentity): Promise<SemanticChapter | undefined> {
+	private eligible(identity: ChapterIdentity, context?: CacheContext): boolean {
+		return (
+			identity.provider !== "crossway" ||
+			(!!context &&
+				esvCacheEligible(
+					identity,
+					context.readingDay,
+					() => new Date(this.clock()),
+					context.timeZone,
+				))
+		);
+	}
+	private allowedEntry(entry: Entry, context?: CacheContext): boolean {
+		if (!context) return true;
+		const today = currentLocalDay(
+			() => new Date(this.clock()),
+			context.timeZone,
+		);
+		return Array.from({ length: 31 }, (_, i) => i + 1).some(
+			(day) =>
+				eligibleReadingDay(day, today) &&
+				readingPlan(day).some(
+					(p) => p.book === entry.book && p.chapter === entry.chapter,
+				),
+		);
+	}
+	async get(
+		identity: ChapterIdentity,
+		context?: CacheContext,
+	): Promise<SemanticChapter | undefined> {
 		try {
+			if (!this.eligible(identity, context)) return undefined;
+			if (identity.provider === "crossway")
+				await this.maintain(identity, context);
 			const { Item } = await this.options.client.send(
 				new GetCommand({
 					TableName: this.options.table,
@@ -98,7 +144,7 @@ export class DynamoChapterRepository implements ChapterRepository {
 		const { Item } = await this.options.client.send(
 			new GetCommand({
 				TableName: this.options.table,
-				Key: { pk: `${cacheNamespace(identity)}:manifest` },
+				Key: { pk: manifestKey(identity) },
 				ConsistentRead: true,
 			}),
 		);
@@ -134,7 +180,7 @@ export class DynamoChapterRepository implements ChapterRepository {
 							Put: {
 								TableName: this.options.table,
 								Item: {
-									pk: `${cacheNamespace(identity)}:manifest`,
+									pk: manifestKey(identity),
 									revision: (previous?.revision ?? 0) + 1,
 									entries,
 								},
@@ -170,13 +216,22 @@ export class DynamoChapterRepository implements ChapterRepository {
 			throw new CacheError();
 		}
 	}
-	async maintain(identity: ChapterIdentity): Promise<void> {
+	async maintain(
+		identity: ChapterIdentity,
+		context?: CacheContext,
+	): Promise<void> {
 		try {
 			for (let attempt = 0; attempt < 20; attempt++) {
 				const previous = await this.manifest(identity);
 				if (!previous) return;
 				const expired = previous.entries
-					.filter((entry) => entry.expiresAt <= this.clock())
+					.filter(
+						(entry) =>
+							entry.expiresAt <= this.clock() ||
+							(identity.provider === "crossway" &&
+								(!entry.pk.startsWith(`${cacheNamespace(identity)}:`) ||
+									!this.allowedEntry(entry, context))),
+					)
 					.slice(0, 98);
 				if (!expired.length) return;
 				const keys = new Set(expired.map((entry) => entry.pk));
@@ -195,11 +250,15 @@ export class DynamoChapterRepository implements ChapterRepository {
 			throw new CacheError();
 		}
 	}
-	async put(chapter: SemanticChapter): Promise<boolean> {
+	async put(
+		chapter: SemanticChapter,
+		context?: CacheContext,
+	): Promise<boolean> {
 		try {
 			validateSemanticChapter(chapter);
-			// ESV admission requires a separate eligibility/capacity policy in its later slice.
-			if (chapter.identity.provider !== "api-bible") throw new CacheError();
+			if (!this.eligible(chapter.identity, context)) return false;
+			const esv = chapter.identity.provider === "crossway";
+			const budget = esv ? Math.min(this.budget, 300) : this.budget;
 			const payload = gzipSync(Buffer.from(JSON.stringify(chapter), "utf8"));
 			const pk = chapterKey(chapter.identity);
 			const now = this.clock();
@@ -207,10 +266,11 @@ export class DynamoChapterRepository implements ChapterRepository {
 			// Include conservative space for attribute names, keys, numbers and binary metadata.
 			if (
 				payload.byteLength + Buffer.byteLength(pk) + 1024 > this.maxBytes ||
-				count > this.budget
+				count > budget ||
+				(esv && count > 200)
 			)
 				return false;
-			await this.maintain(chapter.identity);
+			await this.maintain(chapter.identity, context);
 			for (let attempt = 0; attempt < 8; attempt++) {
 				const previous = await this.manifest(chapter.identity);
 				const existing = (previous?.entries ?? [])
@@ -221,10 +281,15 @@ export class DynamoChapterRepository implements ChapterRepository {
 				const evicted: Entry[] = [];
 				let total =
 					existing.reduce((sum, entry) => sum + entry.verses, 0) + count;
-				while (total > this.budget) {
+				let bookTotal =
+					existing
+						.filter((entry) => entry.book === chapter.identity.book)
+						.reduce((sum, entry) => sum + entry.verses, 0) + count;
+				while (total > budget || (esv && bookTotal > 200)) {
 					const entry = existing.shift();
 					if (!entry) throw new CacheError();
 					total -= entry.verses;
+					if (entry.book === chapter.identity.book) bookTotal -= entry.verses;
 					evicted.push(entry);
 				}
 				// Prune in bounded transactions before admission when there are many tiny chapters.
@@ -243,6 +308,8 @@ export class DynamoChapterRepository implements ChapterRepository {
 				}
 				const entry = {
 					pk,
+					book: chapter.identity.book,
+					chapter: chapter.identity.chapter,
 					verses: count,
 					retrievedAt: now,
 					expiresAt: now + CHAPTER_TTL_MS,

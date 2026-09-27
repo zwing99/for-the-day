@@ -1,8 +1,9 @@
 import { chromium } from "playwright";
+import { verseCards } from "../src/domain/card-packing.js";
 import type { SemanticChapter } from "../src/domain/semantic-chapter.js";
 import { orderedText } from "../src/domain/semantic-chapter.js";
-import { verseCards } from "../src/domain/card-packing.js";
-import { publicFailureCategory } from "./verse-fit-support.js";
+import { ApiBibleProvider } from "../src/server/providers/api-bible.js";
+import { localResponseCache } from "../src/server/providers/local-response-cache.js";
 
 const origin = process.env.VERSE_FIT_ORIGIN ?? "http://127.0.0.1:5173";
 const expectedBibleId = process.env.API_BIBLE_CSB_ID;
@@ -32,19 +33,11 @@ function record(metric: string, candidate: Candidate) {
 	else if (candidate.value === current[0]!.value) current.push(candidate);
 }
 
-function failureCode(body: unknown): string | undefined {
-	const code =
-		body &&
-		typeof body === "object" &&
-		"error" in body &&
-		body.error &&
-		typeof body.error === "object" &&
-		"code" in body.error &&
-		typeof body.error.code === "string"
-			? body.error.code
-			: undefined;
-	return code;
-}
+const offlineProvider = new ApiBibleProvider({
+	apiKey: "offline-verification",
+	bibleId: expectedBibleId,
+	fetch: localResponseCache({ allowNetwork: false }),
+});
 
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 try {
@@ -67,35 +60,14 @@ try {
 		const count = book === "PSA" ? 150 : 31;
 		for (let chapterNumber = 1; chapterNumber <= count; chapterNumber++) {
 			const passage = { book, chapter: chapterNumber } satisfies Passage;
-			let result: { status: number; body?: unknown };
+			let chapter: SemanticChapter;
 			try {
-				result = await page.evaluate(
-					async ({ book, chapterNumber }) => {
-						const response = await fetch(
-							`/api/bible/CSB/${book}/${chapterNumber}`,
-						);
-						let body: unknown;
-						try {
-							body = await response.json();
-						} catch {
-							body = undefined;
-						}
-						return { status: response.status, body };
-					},
-					{ book, chapterNumber },
-				);
+				chapter = await offlineProvider.fetchChapter(passage);
 			} catch {
 				throw new Error(
-					`${book}.${chapterNumber}: local API request failed; no Scripture was written.`,
+					`${book}.${chapterNumber}: no usable cached response; stopping without an upstream request. Import saved samples with mise run cache:import-samples.`,
 				);
 			}
-			if (result.status < 200 || result.status >= 300) {
-				throw new Error(
-					`${book}.${chapterNumber}: ${publicFailureCategory(result.status, failureCode(result.body))} (HTTP ${result.status}); stopping without writing Scripture.`,
-				);
-			}
-			const payload = result.body as { chapter?: SemanticChapter };
-			const chapter = payload.chapter;
 			if (
 				!chapter ||
 				chapter.identity.translation !== "CSB" ||

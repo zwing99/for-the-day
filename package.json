@@ -10,6 +10,7 @@
 		"@hono/node-server": "2.1.1",
 		"@smithy/node-http-handler": "4.12.1",
 		"hono": "4.13.9",
+		"parse5": "8.0.1",
 		"react": "19.3.0",
 		"react-dom": "19.3.0"
 	},

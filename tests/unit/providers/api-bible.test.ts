@@ -7,6 +7,7 @@ import { ApiBibleProvider } from "../../../src/server/providers/api-bible.js";
 import {
 	apiBibleFixture,
 	observedCsbFixture,
+	observedNivNltFixture,
 } from "../../fixtures/api-bible.js";
 
 const passage = { book: "PSA", chapter: 23 } as const;
@@ -17,6 +18,60 @@ const configured = (fetchMock: typeof fetch) =>
 		fetch: fetchMock,
 	});
 describe("API.Bible CSB adapter", () => {
+	it("maps observed acrostic titles and indented list lines without attaching a division to the prior verse", async () => {
+		const raw = observedNivNltFixture();
+		raw.data.content.splice(4, 0, {
+			type: "tag",
+			name: "para",
+			attrs: { style: "qa" },
+			items: [{ type: "text", text: "Next invented division" }],
+		});
+		const mock = vi.fn<typeof fetch>().mockResolvedValue(Response.json(raw));
+		const c = await configured(mock).fetchChapter(passage);
+		expect(c.nodes[0]).toMatchObject({ role: "title" });
+		expect(c.nodes[1]).toMatchObject({ role: "heading" });
+		expect(c.nodes[2]).toMatchObject({ role: "line", indent: 1 });
+		expect(c.nodes[3]).toMatchObject({ role: "line", indent: 2 });
+		expect(c.nodes[5]).toMatchObject({ role: "line", indent: 3 });
+		expect(c.verses[0]!.fragmentNodeIds).toHaveLength(2);
+		expect(c.introTitleNodeIds).toHaveLength(3);
+	});
+	it.each(["NIV", "NLT"] as const)(
+		"preserves the shared contract and actual %s edition identity",
+		async (translation) => {
+			const raw = observedCsbFixture();
+			raw.data.bibleId = `test-${translation}`;
+			const mock = vi.fn<typeof fetch>().mockResolvedValue(Response.json(raw));
+			const chapter = await new ApiBibleProvider({
+				translation,
+				bibleId: raw.data.bibleId,
+				apiKey: "dummy",
+				fetch: mock,
+			}).fetchChapter(passage);
+			expect(new URL(String(mock.mock.calls[0]![0])).pathname).toBe(
+				`/bibles/test-${translation}/chapters/PSA.23`,
+			);
+			expect(chapter.identity).toMatchObject({
+				translation,
+				providerBibleId: raw.data.bibleId,
+				editionKey: `api-bible-v2:test-${translation}:normalizer-2`,
+			});
+			expect(chapter.attribution.translationLabel).toBe(translation);
+			expect(chapter.tracking).toMatchObject({
+				kind: "api-bible-fums",
+				token: "invented-token",
+			});
+			expect(orderedText(chapter.nodes)).toContain("Invented superscription");
+			await expect(
+				new ApiBibleProvider({
+					translation,
+					apiKey: "dummy",
+					fetch: mock,
+				}).fetchChapter(passage),
+			).rejects.toMatchObject({ code: "configuration" });
+			expect(mock).toHaveBeenCalledTimes(1);
+		},
+	);
 	it("requests whole JSON chapters with titles, identities, server-only credentials and cancellation", async () => {
 		const mock = vi
 			.fn<typeof fetch>()

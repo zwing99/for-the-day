@@ -4,11 +4,12 @@ import type {
 	SemanticChapter,
 	Translation,
 } from "../domain/semantic-chapter.js";
+import type { CacheContext } from "./cache/chapter-repository.js";
 import { CacheError } from "./cache/chapter-repository.js";
 import { ProviderError } from "./providers/provider.js";
 
 interface ChapterSource {
-	get(passage: Passage): Promise<SemanticChapter>;
+	get(passage: Passage, context?: CacheContext): Promise<SemanticChapter>;
 }
 export function createApp(
 	services: Partial<Record<Translation, ChapterSource>> = {},
@@ -67,10 +68,15 @@ export function createApp(
 				503,
 			);
 		return c.json({
-			chapter: await service.get({
-				book: book as Passage["book"],
-				chapter: Number(chapter),
-			}),
+			chapter: await service.get(
+				{
+					book: book as Passage["book"],
+					chapter: Number(chapter),
+				},
+				readingDay !== undefined && timeZone !== undefined
+					? { readingDay: Number(readingDay), timeZone }
+					: undefined,
+			),
 		});
 	});
 	app.onError((error, c) => {

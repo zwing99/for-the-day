@@ -95,8 +95,12 @@ description = "Verify exact text and structure of existing ignored CSB samples o
 run = "bun scripts/verify-csb-samples.ts"
 
 [tasks."verify:verse-fit"]
-description = "Opt-in full CSB Psalms/Proverbs renderer measurement (requires local API and Chrome)"
+description = "Offline CSB renderer measurement from saved responses (requires Vite and Chrome)"
 run = "bun scripts/verify-verse-fit.ts"
+
+[tasks."cache:import-samples"]
+description = "Seed the 30-day development response cache from saved API.Bible samples without network access"
+run = "bun scripts/import-provider-cache.ts"
 
 [tasks."test:integration"]
 description = "Run isolated DynamoDB Local repository tests (db:start first)"

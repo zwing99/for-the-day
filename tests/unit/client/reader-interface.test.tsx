@@ -120,6 +120,9 @@ it("keeps the menu usable during rate-limit recovery and respects the retry cool
 		render(<Reader source={api} report={vi.fn()} />);
 	});
 	expect(screen.getByRole("alert").textContent).toContain("Please wait.");
+	expect(screen.getByRole("status").textContent).toContain(
+		"choose another translation",
+	);
 	expect(
 		screen
 			.getByRole("button", { name: "Please wait before retrying" })
@@ -131,6 +134,7 @@ it("keeps the menu usable during rate-limit recovery and respects the retry cool
 	await act(async () => {
 		vi.advanceTimersByTime(1000);
 	});
+	expect(screen.getByRole("status").textContent).toBe("You can try again now.");
 	await act(async () => {
 		fireEvent.click(screen.getByRole("button", { name: "Try again" }));
 	});
@@ -168,14 +172,22 @@ it("keeps navigation rows behind the menu and supplies named ordered passage ind
 			.getByRole("combobox", { name: "Translation" })
 			.hasAttribute("disabled"),
 	).toBe(false);
-	fireEvent(
-		screen.getByRole("dialog"),
-		new Event("cancel", { bubbles: false, cancelable: true }),
+	const dialog = screen.getByRole("dialog") as HTMLDialogElement;
+	const close = vi.spyOn(dialog, "close");
+	const focus = vi.spyOn(
+		screen.getByRole("button", { name: "Open reader menu" }),
+		"focus",
+	);
+	fireEvent(dialog, new Event("cancel", { bubbles: false, cancelable: true }));
+	expect(close.mock.invocationCallOrder[0]).toBeLessThan(
+		focus.mock.invocationCallOrder[0]!,
 	);
 	expect(screen.queryByRole("dialog")).toBeNull();
 	expect(document.activeElement).toBe(
 		screen.getByRole("button", { name: "Open reader menu" }),
 	);
+	close.mockRestore();
+	focus.mockRestore();
 });
 
 it("persists presentation preferences while retaining the logical verse and excludes sheet shortcuts", async () => {

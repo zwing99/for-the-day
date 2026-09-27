@@ -83,7 +83,7 @@ export function ReaderMenu({
 			}}
 			onCancel={(event) => {
 				event.preventDefault();
-				onClose();
+				dismiss();
 			}}
 		>
 			{open && (

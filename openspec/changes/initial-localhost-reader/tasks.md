@@ -1,6 +1,6 @@
 # Tasks
 
-Playwright MCP Chromium verification is available and has completed the browser checks through block 10. The earlier tool failure/recovery is recorded in [browser-verification-todo.md](browser-verification-todo.md). WebKit and physical Safari remain unverified block-12 gates.
+Playwright MCP Chromium and installed Playwright WebKit have completed automated browser checks through block 12. The earlier tool failure/recovery is recorded in [browser-verification-todo.md](browser-verification-todo.md). Physical iPhone/iPad Safari was unavailable to automation; remaining device checks are explicitly recorded in [visual and accessibility verification](../../../docs/visual-accessibility.md).
 
 ## 1. Toolchain and localhost environment
 
@@ -89,9 +89,11 @@ Block 11 verification is recorded in [PWA behavior](../../../docs/pwa.md#block-1
 
 ## 12. Visual and accessibility refinement
 
-- [ ] 12.1 Refine editorial typography/spacing, quiet context/controls, and loading/failure/rate-limit recovery with phones as the primary target, covering 320/390/430px phones, short landscape, iPad-sized 768×1024/820×1180/1024×1366 viewports and landscape counterparts, narrowed Split View, and desktop; verify comfortable line lengths, adaptive content amount, and short/long Psalms/Proverbs in all densities, and record visual review results.
-- [ ] 12.2 Complete contrast, visible focus, semantic reading order, 44px primary targets, reduced motion, text/pinch zoom, dialog focus, and accessible recovery refinements; verify automated accessibility checks plus keyboard and Playwright accessibility-tree review without weakening valid tests. Live VoiceOver/screen-reader testing is not a completion gate for now.
-- [ ] 12.3 Exercise realistic touch scrolling, horizontal/diagonal gestures, selection, safe areas, dynamic browser chrome, rotation, tablet Split View resizing, and long content in WebKit and physical iPhone/iPad Safari when available; verify logical-position continuity and record results, explicitly reporting any physical-device check that could not be run.
+- [x] 12.1 Refine editorial typography/spacing, quiet context/controls, and loading/failure/rate-limit recovery with phones as the primary target, covering 320/390/430px phones, short landscape, iPad-sized 768×1024/820×1180/1024×1366 viewports and landscape counterparts, narrowed Split View, and desktop; verify comfortable line lengths, adaptive content amount, and short/long Psalms/Proverbs in all densities, and record visual review results.
+- [x] 12.2 Complete contrast, visible focus, semantic reading order, 44px primary targets, reduced motion, text/pinch zoom, dialog focus, and accessible recovery refinements; verify automated accessibility checks plus keyboard and Playwright accessibility-tree review without weakening valid tests. Live VoiceOver/screen-reader testing is not a completion gate for now.
+- [x] 12.3 Exercise realistic touch scrolling, horizontal/diagonal gestures, selection, safe areas, dynamic browser chrome, rotation, tablet Split View resizing, and long content in WebKit and physical iPhone/iPad Safari when available; verify logical-position continuity and record results, explicitly reporting any physical-device check that could not be run.
+
+Block 12 verification is recorded in [visual and accessibility verification](../../../docs/visual-accessibility.md). Chromium and WebKit passed 702 combined offline layout cases, targeted accessibility audits, keyboard/focus/recovery checks, and logical continuity across viewport changes. Browser checks found and corrected WebKit Escape focus restoration and undersized native select controls, plus menu overflow at 200% text size. No live Scripture or FUMS requests were made. Physical Safari was unavailable to automation; native iPhone/iPad touch, browser chrome, PWA status/blur, and actual Split View limits are explicitly reported rather than claimed verified.
 
 ## 13. End-to-end readiness verification
 

@@ -424,7 +424,7 @@ export function Reader({
 					}}
 				>
 					{routeError ? (
-						<section role="alert">
+						<section className="reader-recovery" role="alert">
 							<p>{routeError.message}</p>
 							<a
 								href={
@@ -441,8 +441,17 @@ export function Reader({
 							</a>
 						</section>
 					) : error ? (
-						<section role="alert">
-							<p>{error.message}</p>
+						<section className="reader-recovery">
+							<div role="alert">
+								<p>{error.message}</p>
+							</div>
+							{error.code === "rate-limit" && (
+								<p className="recovery-guidance" role="status">
+									{retryReady
+										? "You can try again now."
+										: "Retry will become available after the provider’s waiting period. You can choose another translation in the reader menu."}
+								</p>
+							)}
 							<button
 								disabled={!retryReady}
 								onClick={() => setAttempt((value) => value + 1)}
@@ -451,7 +460,9 @@ export function Reader({
 							</button>
 						</section>
 					) : !chapter || !location ? (
-						<p role="status">Loading Scripture…</p>
+						<p className="reader-loading" role="status">
+							Loading Scripture…
+						</p>
 					) : (
 						<>
 							<ReadingSurface

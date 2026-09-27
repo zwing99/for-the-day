@@ -47,3 +47,40 @@ it("fetches only the requested ESV chapter, without background prefetch or brows
 	expect(writes).not.toHaveBeenCalled();
 	writes.mockRestore();
 });
+it("contains malformed server responses without exposing their body", async () => {
+	vi.stubGlobal(
+		"fetch",
+		vi
+			.fn()
+			.mockResolvedValue(
+				new Response("private upstream diagnostic", { status: 502 }),
+			),
+	);
+	await expect(
+		networkChapterSource.get(
+			{ book: "PSA", chapter: 23 },
+			new AbortController().signal,
+		),
+	).rejects.toMatchObject({
+		code: "unavailable",
+		message: "Scripture is temporarily unavailable. Please try again.",
+	});
+});
+
+it("retains identifiable rate limiting even when an intermediary returns HTML", async () => {
+	vi.stubGlobal(
+		"fetch",
+		vi.fn().mockResolvedValue(
+			new Response("private diagnostic", {
+				status: 429,
+				headers: { "retry-after": "5" },
+			}),
+		),
+	);
+	await expect(
+		networkChapterSource.get(
+			{ book: "PSA", chapter: 23 },
+			new AbortController().signal,
+		),
+	).rejects.toMatchObject({ code: "rate-limit", retryAfterSeconds: 5 });
+});

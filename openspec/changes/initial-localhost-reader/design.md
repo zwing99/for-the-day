@@ -248,6 +248,8 @@ Implement `PreferencesRepository` and `ReadingPositionsRepository` over guarded,
 
 Focus, contrast, 44px primary targets, safe areas, text zoom, reduced motion, and semantic reading order are part of each UI milestone. Use polite status announcements for deliberate passage changes/loading/errors, not every scroll event. Non-gesture passage buttons and direct selection are always available through the controls; keyboard shortcuts ignore form controls/dialogs and preserve native selection and zoom while card navigation settles on aligned pages.
 
+Block 12 retains the existing Scripture typography and page geometry. It strengthens menu control contrast and uses explicit 44px, appearance-neutral native selects with a CSS chevron because WebKit ignored the earlier minimum-height rule. Menu rows can wrap for enlarged text. Escape closes the modal before the caller restores focus, so WebKit no longer attempts to focus an inert trigger. Safe response parsing contains malformed server bodies and preserves identifiable 429 cooldowns; a polite status announces when retry becomes available. The 702 Chromium/WebKit layout cases, focused accessibility audits, visual review, touch/resize evidence, and unavailable physical Safari checks are recorded in `docs/visual-accessibility.md`. No provider requests or new dependencies were required.
+
 ### 9. Shell-only PWA and future frontend data boundary
 
 Place browser requests behind a `ChapterSource` interface so an IndexedDB-backed source can be added in a later change without changing reader/packing contracts. This change uses network fetch and short-lived in-memory data only; ESV retains only the active chapter and disables background chapter prefetch. No IndexedDB Scripture store or localStorage Scripture text.

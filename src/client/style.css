@@ -451,6 +451,7 @@ body {
 }
 .reader-menu header {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: center;
 	justify-content: space-between;
 	gap: 1rem;
@@ -467,21 +468,43 @@ body {
 }
 .reader-menu label {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: center;
 	justify-content: space-between;
-	gap: 1rem;
+	gap: 0.35rem 1rem;
 	min-height: 48px;
 	font-size: 0.9rem;
 }
 .reader-menu select {
+	/* WebKit's native select appearance can ignore minimum height. */
+	appearance: none;
+	box-sizing: border-box;
+	height: 44px;
 	min-height: 44px;
+	min-width: 3.25rem;
 	max-width: 65%;
+	margin-inline-start: auto;
 	font: inherit;
 	color: inherit;
 	background: var(--reader-background);
-	border: 1px solid var(--reader-border);
+	border: 1px solid var(--reader-muted);
 	border-radius: 0.25rem;
-	padding: 0.35rem;
+	padding: 0.35rem 1.75rem 0.35rem 0.6rem;
+}
+.reader-menu label:has(select) {
+	position: relative;
+}
+.reader-menu label:has(select)::after {
+	content: "";
+	position: absolute;
+	right: 0.7rem;
+	bottom: calc(22px - 0.2rem);
+	width: 0.4rem;
+	height: 0.4rem;
+	border-right: 1.5px solid currentColor;
+	border-bottom: 1.5px solid currentColor;
+	transform: rotate(45deg);
+	pointer-events: none;
 }
 .reader-menu .check-field {
 	justify-content: flex-start;
@@ -497,7 +520,7 @@ body {
 }
 .reader-menu button {
 	font-size: 0.85rem;
-	border-color: var(--reader-border);
+	border-color: var(--reader-muted);
 }
 .reader-menu button:disabled {
 	opacity: 0.5;
@@ -523,7 +546,29 @@ body {
 	font: inherit;
 	color: inherit;
 	background: var(--reader-background);
-	border: 1px solid var(--reader-border);
+	border: 1px solid var(--reader-muted);
+}
+.reader-recovery,
+.reader-loading {
+	font-family: system-ui, sans-serif;
+	color: var(--reader-text);
+}
+.reader-recovery p,
+.reader-loading {
+	max-width: 28rem;
+	font-size: 1rem;
+	line-height: 1.6;
+}
+.reader-recovery .recovery-guidance {
+	color: var(--reader-muted);
+	font-size: 0.875rem;
+}
+.reader-recovery a {
+	display: inline-flex;
+	align-items: center;
+	min-height: 44px;
+	color: var(--reader-text);
+	text-underline-offset: 0.2em;
 }
 @media (min-width: 600px) {
 	.reader-menu {

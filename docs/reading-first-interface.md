@@ -39,3 +39,7 @@ The user explicitly waived a fresh full-corpus scan for this font change, choosi
 ## Final screen-page acceptance — 2026-09-26
 
 The current contract supersedes historical growing-card observations above. Full acceptance and limitations are recorded in [the change report](../openspec/changes/archive/2026-09-26-reading-first-reader-ui/integrated-acceptance.md). The current viewport matrix contains 60 invented short/long cases across ten sizes and every density, plus 33 trusted-touch/navigation/attribution cases. Settings survive reload with the same logical verse and faithful hidden-label text. `mise run check` passes 140 tests and `mise run build` passes. WebKit, physical Safari, hardware safe areas and dynamic Safari chrome remain unavailable; this completion does not close the original reader's device gates. Provider work remains paused at this visual checkpoint.
+
+## Visual and accessibility refinement
+
+Block 12 completes the menu target, contrast, zoom wrapping, modal focus, and recovery refinements. See [visual and accessibility verification](visual-accessibility.md) for Chromium/WebKit measurements, visual review, and physical-device limits.

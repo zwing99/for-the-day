@@ -45,7 +45,27 @@ export const networkChapterSource: ChapterSource = {
 					: "Connect to the local server, then try again.",
 			);
 		}
-		const body = await response.json();
+		let body;
+		try {
+			body = await response.json();
+		} catch {
+			if (signal.aborted) throw new DOMException("Cancelled.", "AbortError");
+			const limited = response.status === 429;
+			const retryHeader = response.headers.get("retry-after");
+			const retrySeconds =
+				retryHeader && /^\d+$/.test(retryHeader)
+					? Number(retryHeader)
+					: undefined;
+			throw new ChapterLoadError(
+				limited ? "rate-limit" : "unavailable",
+				limited
+					? "The provider request limit was reached. Please wait before retrying."
+					: "Scripture is temporarily unavailable. Please try again.",
+				limited && retrySeconds !== undefined && Number.isFinite(retrySeconds)
+					? retrySeconds
+					: undefined,
+			);
+		}
 		if (!response.ok) {
 			const messages: Record<string, string> = {
 				configuration:

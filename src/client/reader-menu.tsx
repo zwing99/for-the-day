@@ -3,6 +3,7 @@ import { currentLocalDay, type Passage } from "../domain/reading-plan.js";
 import type { SemanticChapter } from "../domain/semantic-chapter.js";
 import type { Preferences } from "./reading-storage.js";
 import { Attribution } from "./semantic-renderer.js";
+import { ShareLink } from "./share-link.js";
 
 export function ReaderMenu({
 	open,
@@ -18,6 +19,7 @@ export function ReaderMenu({
 	onRestart,
 	onCard,
 	chapter,
+	getLink,
 }: {
 	open: boolean;
 	onClose(): void;
@@ -32,6 +34,7 @@ export function ReaderMenu({
 	onRestart(day: boolean): void;
 	onCard(direction: number): void;
 	chapter?: SemanticChapter;
+	getLink?: () => string;
 }) {
 	const dialog = useRef<HTMLDialogElement>(null);
 	useEffect(() => {
@@ -59,7 +62,14 @@ export function ReaderMenu({
 					...event.currentTarget.querySelectorAll<HTMLElement>(
 						"button:not(:disabled),select:not(:disabled),input:not(:disabled),a[href],summary",
 					),
-				].filter((node) => node.getClientRects().length > 0);
+				].filter((node) => {
+					const closedDetails = node.closest("details:not([open])");
+					return (
+						node.getClientRects().length > 0 &&
+						(!closedDetails ||
+							closedDetails.querySelector("summary")?.contains(node))
+					);
+				});
 				const first = controls[0];
 				const last = controls.at(-1);
 				if (event.shiftKey && document.activeElement === first) {
@@ -254,6 +264,7 @@ export function ReaderMenu({
 							Verse numbers
 						</label>
 					</section>
+					{getLink && <ShareLink getLink={getLink} />}
 					{chapter && <Attribution chapter={chapter} />}
 				</>
 			)}

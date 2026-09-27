@@ -580,6 +580,15 @@ export function Reader({
 				onRestart={restart}
 				onCard={(direction) => actions.current?.move(direction)}
 				chapter={chapter}
+				getLink={
+					chapter && location && !routeError
+						? () =>
+								new URL(
+									readerPath(current.current ?? location),
+									window.location.origin,
+								).href
+						: undefined
+				}
 			/>
 		</div>
 	);

@@ -156,7 +156,24 @@ try {
 			{
 				edition: "CSB",
 				viewport: { width: 320, height: 740 },
-				font: "Georgia 20px / 1.7",
+				font: await page.evaluate(() => {
+					const dom = globalThis as unknown as {
+						document: { querySelector(selector: string): unknown };
+						getComputedStyle(element: unknown): {
+							fontFamily: string;
+							fontSize: string;
+							lineHeight: string;
+						};
+					};
+					const card = dom.document.querySelector(".verse-card");
+					if (!card) throw new Error("No measured Scripture card.");
+					const css = dom.getComputedStyle(card);
+					return {
+						family: css.fontFamily,
+						size: css.fontSize,
+						lineHeight: css.lineHeight,
+					};
+				}),
 				chapters: successfulChapters,
 				atomicUnits,
 				winners: Object.fromEntries(winners),

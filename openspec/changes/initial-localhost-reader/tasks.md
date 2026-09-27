@@ -1,6 +1,6 @@
 # Tasks
 
-Browser verification is deferred at the user's request. See [browser-verification-todo.md](browser-verification-todo.md) for the tool error, recovery steps, and remaining checks; deferred verification is not completion.
+Playwright MCP Chromium verification is available and has completed the browser checks through block 10. The earlier tool failure/recovery is recorded in [browser-verification-todo.md](browser-verification-todo.md). WebKit and physical Safari remain unverified block-12 gates.
 
 ## 1. Toolchain and localhost environment
 
@@ -72,10 +72,12 @@ Block 5 completion reconciles the existing implementation with [the archived scr
 ## 10. Passage context, settings, and presentation controls
 
 - [x] 10.1 Add optional intro cards using provider title references, a non-gesture Begin action, saved-progress precedence, and explicit intro URLs; verify tests for no fabricated titles, disabled intros, retained canonical headings, and return-to-progress behavior.
-- [ ] 10.2 Add subtle persistent passage labels, direct ordered passage indicators with non-color active state, and discoverable minimal controls/attribution; verify phone/iPad/desktop layouts, safe-area placement, focusability, and lack of overlapping Scripture.
-- [ ] 10.3 Add a mobile settings dialog with appropriate tablet bounds for Today/day/restart, translation, system/light/dark, font size, density, intros, and verse labels through the repositories; verify preference/default persistence, scoped passage/day resets, local-midnight Today behavior, form labels, dismissal, focus return, and portrait/landscape/Split View usability.
-- [ ] 10.4 Add self-hosted licensed open-source Scripture typography and replaceable CSS/font-size/measure tokens; verify the font license is retained, switching tokens requires no domain changes, and short/long poetry remains faithful/readable in both themes.
-- [ ] 10.5 Add canonical link sharing with Web Share and copy-link fallback while preserving native text selection; verify translation-bearing location links, success/failure announcements, unsupported APIs, and no bulk Scripture/credential sharing; document controls and browser persistence.
+- [x] 10.2 Add subtle persistent passage labels, direct ordered passage indicators with non-color active state, and discoverable minimal controls/attribution; verify phone/iPad/desktop layouts, safe-area placement, focusability, and lack of overlapping Scripture.
+- [x] 10.3 Add a mobile settings dialog with appropriate tablet bounds for Today/day/restart, translation, system/light/dark, font size, density, intros, and verse labels through the repositories; verify preference/default persistence, scoped passage/day resets, local-midnight Today behavior, form labels, dismissal, focus return, and portrait/landscape/Split View usability.
+- [x] 10.4 Add self-hosted licensed open-source Scripture typography and replaceable CSS/font-size/measure tokens; verify the font license is retained, switching tokens requires no domain changes, and short/long poetry remains faithful/readable in both themes.
+- [x] 10.5 Add canonical link sharing with Web Share and copy-link fallback while preserving native text selection; verify translation-bearing location links, success/failure announcements, unsupported APIs, and no bulk Scripture/credential sharing; document controls and browser persistence.
+
+Block 10 verification is recorded in [the reader guide](../../../docs/reading-first-interface.md#block-10-verification--2026-09-27) and [typography measurements](../../../docs/reading-surface.md#source-serif-4-verification--2026-09-27). The user explicitly approved saved samples and known worst-case references instead of a fresh full-corpus scan for this font change. All 594 offline fit cases passed, using no live Scripture or tracking requests. Safe-area CSS inputs were simulated; physical Safari/WebKit checks remain block 12. Native sharing was mocked, so no links were externally transmitted.
 
 ## 11. PWA application-shell foundation
 

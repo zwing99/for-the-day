@@ -283,3 +283,106 @@ it("restarts only the requested scope, handles day 31, and resolves Today at act
 	await act(async () => {});
 	expect(window.location.pathname).toMatch(/^\/1\/psalm\/1/);
 });
+
+it("copies the addressed verse with its translation and restores all presentation preferences after remount", async () => {
+	const writeText = vi.fn().mockResolvedValue(undefined);
+	Object.defineProperty(navigator, "clipboard", {
+		configurable: true,
+		value: { writeText },
+	});
+	const storage = new ReadingStorage(window.localStorage);
+	const view = render(
+		<Reader source={source()} storage={storage} report={vi.fn()} />,
+	);
+	await screen.findByRole("article", { name: "Verse 2" });
+	openMenu();
+	fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
+	await screen.findByText("Link copied.");
+	const copied = new URL(writeText.mock.calls[0]![0]);
+	expect(copied.pathname).toBe("/7/psalm/7/2");
+	expect(copied.searchParams.get("translation")).toBe("CSB");
+	for (const [name, value] of [
+		["Appearance", "dark"],
+		["Density", "Compact"],
+		["Font size", "larger"],
+	])
+		fireEvent.change(screen.getByRole("combobox", { name }), {
+			target: { value },
+		});
+	fireEvent.click(
+		screen.getByRole("checkbox", { name: "Passage introductions" }),
+	);
+	fireEvent.click(screen.getByRole("checkbox", { name: "Verse numbers" }));
+	view.unmount();
+	render(
+		<Reader
+			source={source()}
+			storage={new ReadingStorage(window.localStorage)}
+			report={vi.fn()}
+		/>,
+	);
+	await waitFor(() =>
+		expect(
+			document
+				.querySelector("[data-active-verse]")
+				?.getAttribute("data-active-verse"),
+		).toBe("b"),
+	);
+	openMenu();
+	expect(
+		(screen.getByRole("combobox", { name: "Appearance" }) as HTMLSelectElement)
+			.value,
+	).toBe("dark");
+	expect(
+		(screen.getByRole("combobox", { name: "Density" }) as HTMLSelectElement)
+			.value,
+	).toBe("Compact");
+	expect(
+		(screen.getByRole("combobox", { name: "Font size" }) as HTMLSelectElement)
+			.value,
+	).toBe("larger");
+	expect(
+		(
+			screen.getByRole("checkbox", {
+				name: "Passage introductions",
+			}) as HTMLInputElement
+		).checked,
+	).toBe(false);
+	expect(
+		(
+			screen.getByRole("checkbox", {
+				name: "Verse numbers",
+			}) as HTMLInputElement
+		).checked,
+	).toBe(false);
+	Reflect.deleteProperty(navigator, "clipboard");
+});
+
+it("wraps menu focus at the collapsed attribution summary rather than its hidden links", async () => {
+	render(<Reader source={source()} report={vi.fn()} />);
+	await screen.findByRole("article", { name: "Verse 2" });
+	openMenu();
+	const dialog = screen.getByRole("dialog");
+	// Chromium may retain client rects for links in a collapsed details element.
+	for (const control of dialog.querySelectorAll<HTMLElement>(
+		"button,select,input,a,summary",
+	))
+		Object.defineProperty(control, "getClientRects", {
+			value: () => [{ width: 1, height: 1 }],
+		});
+	const summary = dialog.querySelector("summary")!;
+	summary.focus();
+	fireEvent.keyDown(summary, { key: "Tab" });
+	expect(document.activeElement).toBe(
+		screen.getByRole("button", { name: "Close reader menu" }),
+	);
+	fireEvent.keyDown(document.activeElement!, { key: "Tab", shiftKey: true });
+	expect(document.activeElement).toBe(summary);
+	fireEvent.click(summary);
+	const link = within(dialog).getByRole("link", { name: "Test" });
+	link.focus();
+	fireEvent.keyDown(link, { key: "Tab" });
+	expect(document.activeElement).toBe(
+		screen.getByRole("button", { name: "Close reader menu" }),
+	);
+});

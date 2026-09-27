@@ -89,6 +89,7 @@ export function ReadingSurface({
 	const completedRestore = useRef<number | undefined>(undefined);
 	const [budget, setBudget] = useState({ columns: 28, lines: 16 });
 	const [surfaceSize, setSurfaceSize] = useState({ width: 0, height: 0 });
+	const [fontRevision, setFontRevision] = useState(0);
 	const [layoutOverride, setLayoutOverride] = useState<{
 		key: string;
 		cards: PackedCard[];
@@ -97,7 +98,7 @@ export function ReadingSurface({
 		key: string;
 		scales: Record<string, number>;
 	}>();
-	const layoutKey = `${chapter.identity.editionKey}:${chapter.identity.book}:${chapter.identity.chapter}:${density}:${fontSize}:${budget.columns}x${budget.lines}:${surfaceSize.width}x${surfaceSize.height}`;
+	const layoutKey = `${chapter.identity.editionKey}:${chapter.identity.book}:${chapter.identity.chapter}:${density}:${fontSize}:${fontRevision}:${budget.columns}x${budget.lines}:${surfaceSize.width}x${surfaceSize.height}`;
 	const baseCards = useMemo(
 		() => packChapter(chapter, density, budget),
 		[chapter, density, budget],
@@ -140,7 +141,7 @@ export function ReadingSurface({
 		fit();
 		surface.addEventListener("toggle", fit, true);
 		return () => surface.removeEventListener("toggle", fit, true);
-	}, [surfaceSize, chapter, fontSize, intro]);
+	}, [surfaceSize, chapter, fontSize, fontRevision, intro]);
 	useEffect(() => {
 		const surface = content.current?.closest("main");
 		if (!surface) return;
@@ -185,8 +186,13 @@ export function ReadingSurface({
 			clearTimeout(timer);
 			timer = setTimeout(measure, 120);
 		};
-		void document.fonts?.ready.then(resize);
-		document.fonts?.addEventListener("loadingdone", resize);
+		const fontLoaded = () => {
+			if (disposed) return;
+			setFontRevision((revision) => revision + 1);
+			resize();
+		};
+		void document.fonts?.ready.then(fontLoaded);
+		document.fonts?.addEventListener("loadingdone", fontLoaded);
 		const observer =
 			typeof ResizeObserver === "undefined"
 				? undefined
@@ -198,7 +204,7 @@ export function ReadingSurface({
 			disposed = true;
 			clearTimeout(timer);
 			observer?.disconnect();
-			document.fonts?.removeEventListener("loadingdone", resize);
+			document.fonts?.removeEventListener("loadingdone", fontLoaded);
 			window.removeEventListener("resize", resize);
 		};
 	}, [fontSize]);
@@ -318,6 +324,7 @@ export function ReadingSurface({
 		budget,
 		density,
 		fontSize,
+		fontRevision,
 		surfaceSize,
 	]);
 	useEffect(() => {
@@ -475,10 +482,10 @@ export function ReadingSurface({
 				{
 					"--reader-font-size":
 						fontSize === "larger"
-							? "1.75rem"
+							? "var(--scripture-size-larger, 1.75rem)"
 							: fontSize === "large"
-								? "1.5rem"
-								: "clamp(1rem, calc(0.33rem + var(--reading-height, 634px) * 0.0232), 1.25rem)",
+								? "var(--scripture-size-large, 1.5rem)"
+								: "var(--scripture-size-normal, 1.25rem)",
 				} as React.CSSProperties
 			}
 			data-active-verse={active}

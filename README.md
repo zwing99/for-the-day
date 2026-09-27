@@ -18,8 +18,9 @@ The reader opens to today. You can choose another day, return to Today, or revis
 - Adjust text size, spacing, and appearance to suit your reading.
 - Move between passages with a swipe, the passage indicators, or the reader menu.
 - Use a keyboard, select text, and zoom with familiar browser controls.
+- Share your current location or copy its link from the reader menu.
 
-For the day is still being built. The CSB reader is available locally; more translations and an installable app are in progress.
+CSB, NIV, NLT, and ESV are available locally with configured provider access. The installable app is still in progress.
 
 ## Try it on your computer
 

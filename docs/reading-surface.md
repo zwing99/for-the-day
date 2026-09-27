@@ -46,4 +46,23 @@ The current reading-first composition and its verification are documented in [re
 
 Normal Scripture typography adapts to the measured reading height between 16px and 20px at the standard root size. Short landscape uses less page padding and removes passage dots and the redundant brand; navigation remains in the menu with full touch targets. Complete-verse groups reduce before indivisible pages receive a measured local font adjustment. That adjustment preserves the selected preference and provider formatting. The benchmark measurements and effective sizes are recorded in the active change's `verse-fit-research.md`.
 
-Run `mise run verify:verse-fit` when refreshing the Psalms/Proverbs typography benchmarks or after changing the semantic renderer. It requires configured `API_BIBLE_CSB_ID`, the local API (`mise run dev`), and installed Chrome/Chromium. The command scans all 150 Psalms and 31 Proverbs chapters through the local API, checks edition and passage identity, renders through `ChapterCards`, and reports reference/geometry winners by height, characters, words, and preserved semantic lines. It keeps chapter content in memory and prints no Scripture, credentials, provider tokens, or upstream error messages. The regular visual regression set remains the five references in `AGENTS.md`; this full scan is opt-in.
+Run `mise run verify:verse-fit` when refreshing the Psalms/Proverbs typography benchmarks or after changing the semantic renderer. It requires configured `API_BIBLE_CSB_ID`, the local API (`mise run dev`), and installed Chrome/Chromium. The command reads all 150 Psalms and 31 Proverbs chapters through the ignored 30-day API.Bible response cache with network access disabled, checks edition and passage identity, renders through `ChapterCards`, and reports actual font metrics and reference/geometry winners by height, characters, words, and preserved semantic lines. Missing or expired source responses stop the scan without upstream requests. It keeps chapter content in memory and prints no Scripture, credentials, provider tokens, or upstream error messages. The regular visual regression set remains the five references in `AGENTS.md`.
+
+## Source Serif 4 verification — 2026-09-27
+
+Self-hosted unmodified Source Serif 4 release 4.005R assets and their license are in `public/fonts/source-serif-4/`. CSS exposes `--font-scripture`, `--reading-measure`, `--context-measure`, `--scripture-line-height`, and normal/large/larger size tokens. The normal-size token is defined on `.reading-scroll` so it can use the measured `--reading-height`. Provider indentation remains expressed in em units. Font readiness invalidates fitting even when viewport dimensions do not change. A browser token substitution to Georgia and a 32rem column retained the addressed verse, with no domain change.
+
+The user approved saved-sample and known-worst-case verification in place of a new full-corpus scan for this font change. The 594 cases comprise 396 checks of 22 existing chapters across six viewports/all densities, 108 checks of all five CSB regression chapters plus ESV Psalm 57 across the same matrix, and 90 large/larger/200%-text checks of those benchmarks. Every rendered ordered text leaf matched its local chapter; all cards fit with provider formatting intact. This evidence covers the saved chapters, not unmeasured corpus maxima.
+
+| Viewport | Available surface | Minimum normal effective size | Benchmark fitting |
+| --- | --- | --- | --- |
+| 320×568 | 524px | 16.50px ESV; 17.44px CSB | ESV Psalm 57 uses 5.38% shrinking; all five CSB benchmarks need none |
+| 390×844 | 738px | 20px | No shrinking |
+| 844×390 | 346px | 15.64px ESV; 16px CSB | ESV Psalm 57 uses 2.24% shrinking; all five CSB benchmarks need none |
+| 768×1024 | 918px | 20px | No shrinking |
+| 375×1024 | 918px | 20px | No shrinking |
+| 1440×900 | 794px | 20px | No shrinking |
+
+Large/larger choices retained their preferences while indivisible benchmarks fitted locally: minimum effective CSB type was 19.21px in small portrait and 19.62px in short landscape; ESV Psalm 57's minima were 16.50px and 15.64px. At 200% root text on 320×568 the surface was 476px, with minimum CSB 18.60px and ESV 16.47px. Native 2× browser magnification retained the logical verse and `pan-y pinch-zoom`. Both themes were exercised and invented-text screenshots were visually reviewed. Hardware Safari safe areas, dynamic browser chrome, WebKit, and physical iPhone/iPad testing remain block 12 gates.
+
+Three additional 320×568 checks switched CSB Psalm 57:1 to ESV with the approximation notice visible, one per density. The active anchor remained verse 1, all content fit into 470px within a 486px surface, and effective type was 16.47px (0.53% local fitting after adaptive normal sizing).

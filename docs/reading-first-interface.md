@@ -1,8 +1,8 @@
 # Reading-first interface
 
-The reader uses a viewport shell with quiet passage/translation context, one menu trigger, and small ordered passage indicators. Scripture occupies the central native vertical scroll surface. There are no permanent card/passage button rows or exposed passage select. Short groups have deliberate vertical spacing; long groups grow in the same flow. The independently adapted hn-tok patterns are viewport composition, bounded content, and continuous intro scrolling; its fixed-height mandatory snap and news styling are not used.
+The reader uses a viewport shell with quiet passage/translation context, one menu trigger, and small ordered passage indicators. Scripture occupies the central native vertical scroll surface. There are no permanent card/passage button rows or exposed passage select. Short groups have deliberate vertical spacing. All pages occupy exactly the usable viewport; oversized groups separate at verse boundaries, then indivisible content receives measured local typography fitting. The independently adapted hn-tok patterns are viewport composition, bounded content, and continuous intro scrolling; the reader uses mandatory full-screen snapping while preserving Scripture formatting and its own visual style.
 
-Scroll vertically within a passage; a deliberate horizontal swipe selects the next/previous passage with bounded ends. ArrowLeft/ArrowRight change passages when the reading surface has focus. ArrowUp/ArrowDown and PageUp/PageDown move among short cards and leave native scrolling available for tall cards. Select a small passage indicator for a direct jump. Each indicator has a named 44px target and a non-color active mark.
+Scroll vertically within a passage; a deliberate horizontal swipe selects the next/previous passage with bounded ends. ArrowLeft/ArrowRight change passages when the reading surface has focus. ArrowUp/ArrowDown and PageUp/PageDown move among complete aligned pages. Select a small passage indicator for a direct jump. Each indicator has a named 44px target and a non-color active mark.
 
 Open the reader menu for card/passage alternatives, direct selection, Today/day, scoped restart, appearance, type size, density, introductions, and verse labels. Escape or Close dismisses the dialog and returns focus to the menu trigger. Native dialog modality keeps background controls inert. Presentation changes retain the logical verse and use the existing guarded reference-only storage. CSB is currently available; translation switching remains disabled until provider and mapping work is delivered.
 
@@ -10,7 +10,7 @@ An enabled introduction shares the scroll sequence with Scripture. Scroll upward
 
 Attribution remains in the passage flow and is also available in the menu. Preferences and locations contain no Scripture text. This change does not alter provider APIs, DynamoDB caching or native row TTL.
 
-## Verification checkpoint
+## Historical verification checkpoint
 
 `mise run check` passes 122 unit/component tests; `mise run build` builds the browser and Node-compatible listener. Component coverage includes minimized chrome, named six/two indicators, preference persistence, intro/display activation, sheet dismissal, scoped restart, and Today resolving the day at action time across midnight.
 
@@ -25,3 +25,7 @@ The long fixture also passed all 27 viewport/density combinations above, retaini
 ## Initial-reader backlog reconciliation
 
 Initial task 10.1 is delivered by the continuous intro implementation and its component/browser checks. Task 10.2 has the quiet labels, indicators, attribution, and responsive layout, but remains open for Safari safe-area verification. Task 10.3 has the navigation/presentation sheet and persistence checks, but remains open for working translation selection after the remaining providers arrive. Tasks 12.1–12.3 retain their unchecked status: this checkpoint does not replace the larger original viewport/content matrix, automated accessibility audit, or unavailable WebKit/physical Safari checks. Provider implementation remains paused for visual review of this milestone.
+
+## Final screen-page acceptance — 2026-09-26
+
+The current contract supersedes historical growing-card observations above. Full acceptance and limitations are recorded in [the change report](../openspec/changes/reading-first-reader-ui/integrated-acceptance.md). The current viewport matrix contains 60 invented short/long cases across ten sizes and every density, plus 33 trusted-touch/navigation/attribution cases. Settings survive reload with the same logical verse and faithful hidden-label text. `mise run check` passes 140 tests and `mise run build` passes. WebKit, physical Safari, hardware safe areas and dynamic Safari chrome remain unavailable; this completion does not close the original reader's device gates. Provider work remains paused at this visual checkpoint.

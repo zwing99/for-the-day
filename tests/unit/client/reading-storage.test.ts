@@ -28,6 +28,19 @@ it("retains independent positions and active passage in memory when storage fail
 	expect(store.position(route(37, "intro"))?.location).toBe("3");
 	expect(store.position(route(67, "intro"))?.location).toBe("4");
 	expect(store.activePassage(7)?.chapter).toBe(67);
+	store.setPreferences({
+		...store.preferences(),
+		appearance: "dark",
+		fontSize: "larger",
+		intros: false,
+		verseLabels: false,
+	});
+	expect(store.preferences()).toMatchObject({
+		appearance: "dark",
+		fontSize: "larger",
+		intros: false,
+		verseLabels: false,
+	});
 });
 it("recovers valid preferences from corrupt fields and contains malformed JSON", () => {
 	const store = new ReadingStorage({

@@ -60,3 +60,33 @@ it("uses verified nearest identity before same label, then approximate same labe
 		approximate: true,
 	});
 });
+
+it("does not use a sparse first-verse Crossway bridge to reset an unmapped verse", () => {
+	for (const [translation, edition] of [
+		["NIV", "78a9f6124f344018-01"],
+		["NLT", "d6e14a625393b4da-01"],
+	] as const) {
+		const source = semanticFixture(),
+			target = semanticFixture();
+		source.identity.translation = translation;
+		source.identity.providerBibleId = edition;
+		target.identity.translation = "ESV";
+		target.identity.provider = "crossway";
+		target.verses[0]!.providerIds = ["19023001"];
+		target.verses[0]!.orgIds = [];
+		target.verses[1]!.providerIds = ["19023002"];
+		target.verses[1]!.orgIds = [];
+		expect(
+			mapTranslationLocation(source, source.verses[1]!, target),
+		).toMatchObject({
+			verse: { key: "b", displayLabel: "2" },
+			approximate: true,
+		});
+		expect(
+			mapTranslationLocation(target, target.verses[1]!, source),
+		).toMatchObject({
+			verse: { key: "b", displayLabel: "2" },
+			approximate: true,
+		});
+	}
+});

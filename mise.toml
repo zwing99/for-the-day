@@ -28,7 +28,7 @@ run = ["bun x --no-install vite build", "bun build src/server/listener.ts --targ
 
 [tasks."db:start"]
 description = "Start persistent DynamoDB Local (requires Docker Desktop)"
-run = "docker compose up -d dynamodb"
+run = "bun scripts/start-db.ts"
 
 [tasks."db:stop"]
 description = "Stop DynamoDB Local while retaining its data volume"
@@ -109,6 +109,10 @@ run = "bun scripts/import-provider-cache.ts"
 [tasks."test:integration"]
 description = "Run isolated DynamoDB Local repository tests (db:start first)"
 run = "bun x --no-install vitest run tests/integration"
+
+[tasks."test:browser"]
+description = "Verify Chromium/WebKit routes, mobile menus and recovery with invented responses (dev:web first)"
+run = "bun scripts/verify-browser.ts"
 
 [tasks."smoke:csb"]
 description = "Opt-in real CSB API/cache/React smoke test (dev and saved samples required)"

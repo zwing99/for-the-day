@@ -272,6 +272,8 @@ Browser checks cover URL reload/sharing/back/forward, native scrolling, delibera
 
 ## Risks / Trade-offs
 
+Block 13 readiness is recorded in `docs/readiness.md`. Setup now checks Docker availability with actionable local guidance, and `test:browser` exposes a repeatable Chromium/WebKit invented-response smoke suite. Final real-response switching revealed that sparse Crossway first-verse bridges incorrectly participated in nearest-identity selection, resetting unmapped NIV/NLT locations to the beginning. These bridges now establish exact correspondences only; Crossway requests without an exact bridge use the explicitly approximate same-label/nearest-available fallback. Native API.Bible organizational nearest matching remains unchanged. All four approved live chapter requests, cached FUMS transport reports, isolated cache suites, and final build/Node checks passed; physical-device checks remain explicitly unverified.
+
 At the user's request, live VoiceOver/screen-reader testing is not a completion gate for this change for now. Keyboard checks and Playwright accessibility-tree review verify focus, accessible names, and semantic reading order. This does not remove the accessible product behavior requirements or establish actual screen-reader speech behavior.
 
 - [Provider formatting varies by edition and API generation] → Verify the specified representative responses at the adapter milestone, commit only invented-text structural fixtures, and update this design/specs if a material planning error appears.

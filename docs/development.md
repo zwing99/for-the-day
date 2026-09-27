@@ -63,12 +63,17 @@ Use `mise tasks` to discover the command surface. Package scripts do not duplica
 | `preview` | Serve an existing production build on port 4173 with API proxy |
 | `db:start`, `db:init`, `db:stop` | Persistent local database lifecycle |
 | `test:integration` | Isolated cache tests; start DynamoDB Local first |
+| `test:browser` | Chromium/WebKit responsive routes, menus, focus and recovery using invented responses; run dev:web first |
 | `smoke:csb` | Opt-in real-provider smoke test; requires credentials, saved samples, and dev |
 | `inspect:csb`, `verify:csb-samples` | Save ignored provider samples, then verify their fidelity offline |
 | `cache:import-samples` | Import saved API.Bible samples into the 30-day development cache without network requests |
 | `verify:verse-fit` | Offline layout measurement from cached responses; requires Vite and Chrome and stops on cache misses |
 
 Cache/API behavior and the latest verification checkpoint are in [docs/chapter-api-cache.md](chapter-api-cache.md).
+
+For the repeatable browser smoke suite, install the pinned Playwright browsers once with `mise exec -- bun x --no-install playwright install chromium webkit`, start `mise run dev:web`, then run `mise run test:browser` in another terminal. It intercepts all chapter requests and blocks external requests, so no provider credentials or API quota are used. `WEB_PORT` selects the frontend port. Broader touch, PWA, and measured worst-case review results are linked from [final readiness](readiness.md).
+
+If setup/dev reports Docker unavailable, open Docker Desktop and wait until its engine is running, then retry. If Docker is absent, install it first. Missing provider credentials or edition access produces a safe reader recovery state; configure the corresponding server fields and restart dev. Unit/component tests remain Docker-independent. Live provider smoke checks are opt-in: agree on a request budget first and reuse saved responses for subsequent verification.
 
 The built preview includes the installable static shell. See [PWA behavior and verification](pwa.md) for offline recovery, exclusions, safe updates and development cleanup. `mise run host` uses plain HTTP for phone interaction testing; service-worker installation needs localhost/loopback or a secure origin.
 
@@ -78,7 +83,9 @@ Raw provider responses belong only in ignored `.local/provider-samples/`. Commit
 
 ## Verification record
 
-Latest checkpoint (2026-09-26): `mise run check` passes 163 unit/component tests plus typechecking, lint, and formatting. The production build and OpenSpec validation pass. Chromium checks cover independent passage restoration, reload/shared URLs, Back/Forward, trusted touch gestures, selection/zoom exclusions, non-gesture controls, and phone/tablet/short-landscape page alignment. `mise run host` was verified with alternate ports, a printed LAN URL, and a successful `/api/health` request through that address. WebKit and physical iPhone/iPad Safari checks remain pending. The initial reader change has 26/53 tasks complete; semantic packing verification, remaining translations, PWA work, and final acceptance remain in progress.
+Latest checkpoint (2026-09-27): all 53 initial-reader tasks are complete. `mise run check` passes 215 unit/component tests and both typechecks/lint/format checks; 15 isolated DynamoDB integration tests, 40 Chromium/WebKit route/menu cases plus recovery, production build, and Node 24 runtime checks pass. Four approved live chapter requests and actual cached FUMS reports passed. Final acceptance, the translation-mapping correction, secret/storage review, and unavailable physical Safari checks are recorded in [readiness](readiness.md). Desktop WebKit verification does not establish actual iPhone/iPad behavior.
+
+The following paragraphs preserve earlier milestone evidence; the final readiness record supersedes their pending-gate statements.
 
 Block 1 command-surface verification: `mise tasks` lists the documented tasks; `mise run check` passed all 140 unit/component tests and type/lint/format checks, and `mise run build` passed. Starting `mise run dev` initialized the existing local table and served a healthy `/api/health` response through Vite. Ctrl-C released both ports 5173 and 8787, as verified with `lsof`; DynamoDB remained available as intended.
 

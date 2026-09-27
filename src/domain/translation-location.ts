@@ -68,7 +68,14 @@ export function mapTranslationLocation(
 	);
 	if (exact) return { verse: exact.verse, approximate: false };
 	let nearest: { verse: VerseIdentity; distance: number } | undefined;
-	for (const c of candidates)
+	// Sparse Crossway bridges prove exact correspondences only. Their nearest
+	// anchor does not establish the nearest corresponding verse in the chapter.
+	const nearestCandidates =
+		source.identity.provider === "crossway" ||
+		target.identity.provider === "crossway"
+			? []
+			: candidates;
+	for (const c of nearestCandidates)
 		for (const a of from)
 			for (const b of c.spans) {
 				if (a.prefix !== b.prefix) continue;

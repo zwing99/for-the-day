@@ -7,7 +7,7 @@ const text = (
 	id: string,
 	value: string,
 	verseKeys: string[] = [],
-): SemanticNode => ({
+): Extract<SemanticNode, { kind: "text" }> => ({
 	id,
 	kind: "text",
 	text: value,

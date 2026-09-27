@@ -88,3 +88,7 @@ Changing translation SHALL preserve day and active passage and SHALL retain the 
 #### Scenario: Switch failure
 - **WHEN** the newly requested translation fails to load
 - **THEN** existing Scripture and location remain available with retry or another translation choice
+
+#### Scenario: Sparse Crossway correspondence
+- **WHEN** only a first-verse Crossway correspondence is verified and a different unmapped verse has the same displayed label in the target edition
+- **THEN** that same-label location is selected with an approximation notice rather than treating the sparse correspondence as proof of the nearest mapped verse

@@ -1,0 +1,90 @@
+@font-face {
+	font-family: "Source Serif 4";
+	src: url("/fonts/source-serif-4/SourceSerif4-Regular.woff2") format("woff2");
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "Source Serif 4";
+	src: url("/fonts/source-serif-4/SourceSerif4-It.woff2") format("woff2");
+	font-style: italic;
+	font-weight: 400;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "Source Serif 4";
+	src: url("/fonts/source-serif-4/SourceSerif4-Semibold.woff2") format("woff2");
+	font-style: normal;
+	font-weight: 600;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "Source Serif 4";
+	src: url("/fonts/source-serif-4/SourceSerif4-SemiboldIt.woff2")
+		format("woff2");
+	font-style: italic;
+	font-weight: 600;
+	font-display: swap;
+}
+
+:root {
+	/* Shared defaults: rem-based measures and larger font preferences; unitless
+	   Scripture line height. Normal size is calibrated on the measured surface. */
+	--font-scripture: "Source Serif 4", Georgia, serif;
+	--reading-measure: 38rem;
+	--context-measure: 42rem;
+	--scripture-line-height: 1.7;
+	--scripture-size-large: 1.5rem;
+	--scripture-size-larger: 1.75rem;
+	font-family: var(--font-scripture);
+	color: #302e29;
+	background: #f8f6ef;
+	color-scheme: light;
+}
+
+:root[data-browser-appearance="dark"] {
+	background: #222320;
+	color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root:not([data-browser-appearance]) {
+		background: #222320;
+		color-scheme: dark;
+	}
+}
+
+/* Palette is inherited by chrome, pages, native dialog and focus treatment. */
+.reader-shell {
+	--reader-background: #f8f6ef;
+	--reader-text: #302e29;
+	--reader-muted: #625e54;
+	--reader-border: #dedbd2;
+	--reader-focus: #665929;
+	background: var(--reader-background);
+	color: var(--reader-text);
+	color-scheme: light;
+}
+.reader-shell[data-appearance="dark"] {
+	--reader-background: #222320;
+	--reader-text: #e9e5da;
+	--reader-muted: #bcb8ad;
+	--reader-border: #44463e;
+	--reader-focus: #d7c787;
+	color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+	.reader-shell[data-appearance="system"] {
+		--reader-background: #222320;
+		--reader-text: #e9e5da;
+		--reader-muted: #bcb8ad;
+		--reader-border: #44463e;
+		--reader-focus: #d7c787;
+		color-scheme: dark;
+	}
+}

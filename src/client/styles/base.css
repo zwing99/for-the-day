@@ -1,0 +1,32 @@
+/* The reader shell reserves chrome space outside the native reading surface. */
+html,
+body,
+#root {
+	height: 100%;
+}
+
+body {
+	margin: 0;
+	overscroll-behavior-y: none;
+}
+
+:where(.reader-shell) button,
+:where(.reader-shell) summary {
+	font-family: system-ui, sans-serif;
+	min-height: 44px;
+	cursor: pointer;
+}
+
+:where(.reader-shell) button {
+	padding: 0.65rem 1rem;
+	border: 1px solid currentColor;
+	border-radius: 0.35rem;
+	color: inherit;
+	background: transparent;
+	font-size: 1rem;
+}
+
+:where(.reader-shell) :focus-visible {
+	outline: 3px solid var(--reader-focus);
+	outline-offset: 4px;
+}

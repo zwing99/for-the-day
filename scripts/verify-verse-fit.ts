@@ -5,6 +5,12 @@ import { orderedText } from "../src/domain/semantic-chapter.js";
 import { ApiBibleProvider } from "../src/server/providers/api-bible.js";
 import { localResponseCache } from "../src/server/providers/local-response-cache.js";
 
+// Benchmark mode finishes after the bounded, cached-only regression matrix.
+if (process.env.VERSE_FIT_SCOPE === "benchmarks") {
+	await import("./verify-verse-fit-benchmarks.js");
+	process.exit(0);
+}
+
 const origin = process.env.VERSE_FIT_ORIGIN ?? "http://127.0.0.1:5173";
 const expectedBibleId = process.env.API_BIBLE_CSB_ID;
 if (!expectedBibleId)
@@ -41,7 +47,9 @@ const offlineProvider = new ApiBibleProvider({
 
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 try {
-	const page = await browser.newPage({ viewport: { width: 320, height: 740 } });
+	const page = await browser.newPage({
+		viewport: { width: 320, height: 740 },
+	});
 	await page.goto(`${origin}/scripts/verse-fit-check.html`, {
 		waitUntil: "networkidle",
 	});

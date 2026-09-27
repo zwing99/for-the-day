@@ -170,6 +170,9 @@ export function ReadingSurface({
 							height: surface!.clientHeight,
 						},
 			);
+			// The shell grid owns viewport/chrome geometry. Publish only the measured
+			// surface height in CSS px; CSS consumes it for pages and selected type.
+			// Per-page fitting scales below are unitless and never alter preferences.
 			surface!.style.setProperty(
 				"--reading-height",
 				`${surface!.clientHeight}px`,
@@ -482,10 +485,10 @@ export function ReadingSurface({
 				{
 					"--reader-font-size":
 						fontSize === "larger"
-							? "var(--scripture-size-larger, 1.75rem)"
+							? "var(--scripture-size-larger)"
 							: fontSize === "large"
-								? "var(--scripture-size-large, 1.5rem)"
-								: "var(--scripture-size-normal, 1.25rem)",
+								? "var(--scripture-size-large)"
+								: "var(--scripture-size-normal)",
 				} as React.CSSProperties
 			}
 			data-active-verse={active}

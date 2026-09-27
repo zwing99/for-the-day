@@ -1,0 +1,101 @@
+/* Selected size is produced by ReadingSurface on its card wrapper. The 1.25rem
+   fallback is needed by ChapterCards in the standalone corpus harness.
+   ChapterCards writes each unitless --page-font-scale (1 means selected size).
+   Semantic whitespace, indentation and provider text remain untouched. */
+.verse-card {
+	font-family: var(--font-scripture);
+	font-size: calc(var(--reader-font-size, 1.25rem) * var(--page-font-scale, 1));
+	line-height: var(--scripture-line-height);
+	overflow-wrap: anywhere;
+}
+.verse-card span {
+	white-space: pre-wrap;
+}
+.verse-card p {
+	font-size: inherit;
+	margin-block: 0.75em;
+}
+.verse-label {
+	font-family: system-ui, sans-serif;
+	font-size: 0.65em;
+	margin-inline-end: 0.45em;
+}
+
+.semantic-heading,
+.semantic-title {
+	font-weight: 400;
+	font-size: 1.1em;
+}
+
+.semantic-line {
+	min-height: 1em;
+}
+
+.stanza-break {
+	height: 1em;
+}
+
+.mark-small-caps {
+	font-variant: small-caps;
+}
+
+.mark-italic {
+	font-style: italic;
+}
+
+.mark-bold,
+.mark-acrostic {
+	font-weight: 600;
+}
+
+.mark-superscript {
+	vertical-align: super;
+	font-size: 0.75em;
+}
+
+.card-literature {
+	width: 100%;
+	margin-block: auto;
+}
+.card-literature > :first-child {
+	margin-top: 0;
+}
+
+.reader-shell[data-verse-labels="false"] .verse-label {
+	display: none;
+}
+
+.reading-scroll {
+	/* Normal calibration: 1rem at (1 - .33)rem/.0232 of available height,
+    1.25rem at (1.25 - .33)rem/.0232. At a 16px root these are
+    462.0689655172414px and 634.4827586206897px. Endpoints scale with root
+    type, preserving the measured CSB calibration rather than rounding it.
+    634px is the historical pre-measurement font calibration default. */
+	--scripture-normal-min-size: 1rem;
+	--scripture-normal-max-size: 1.25rem;
+	--scripture-normal-min-height: calc((1rem - 0.33rem) / 0.0232);
+	--scripture-normal-max-height: calc((1.25rem - 0.33rem) / 0.0232);
+	/* Compatibility curve for engines without length/length calc division. */
+	--scripture-size-normal: clamp(
+		1rem,
+		calc(0.33rem + var(--reading-height, 634px) * 0.0232),
+		1.25rem
+	);
+}
+@supports (font-size: calc(1px * (1px / 1px))) {
+	.reading-scroll {
+		--scripture-size-normal: clamp(
+			var(--scripture-normal-min-size),
+			calc(
+				var(--scripture-normal-min-size) +
+				(var(--reading-height, 634px) - var(--scripture-normal-min-height)) /
+				(
+					var(--scripture-normal-max-height) -
+					var(--scripture-normal-min-height)
+				) *
+				(var(--scripture-normal-max-size) - var(--scripture-normal-min-size))
+			),
+			var(--scripture-normal-max-size)
+		);
+	}
+}

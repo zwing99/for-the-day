@@ -1,0 +1,38 @@
+.passage-stage {
+	position: relative;
+	min-height: 0;
+	overflow: clip;
+}
+
+.passage-stage > .reading-scroll {
+	height: 100%;
+	width: 100%;
+	background: var(--reader-background);
+}
+
+.passage-preview {
+	position: absolute;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	padding: 1.5rem;
+	background: var(--reader-background);
+	border-inline: 1px solid var(--reader-border);
+	text-align: center;
+}
+
+.passage-stage[data-transition="settling"] > .reading-scroll,
+.passage-stage[data-transition="settling"] > .passage-preview {
+	transition: transform 180ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.passage-stage > .reading-scroll,
+	.passage-stage > .passage-preview {
+		transform: none !important;
+		transition: none !important;
+	}
+	.passage-preview {
+		display: none;
+	}
+}

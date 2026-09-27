@@ -100,7 +100,9 @@ run = "bun scripts/verify-provider-samples.ts"
 
 [tasks."verify:verse-fit"]
 description = "Offline CSB renderer measurement from saved responses (requires Vite and Chrome)"
-run = "bun scripts/verify-verse-fit.ts"
+# Playwright browser shutdown is reliable under Node; Bun builds the TS runner.
+# VERSE_FIT_SCOPE=benchmarks checks the standing regression matrix only.
+run = ["bun build scripts/verify-verse-fit.ts --target=node --packages=external --outfile=.local/verification/verify-verse-fit.mjs", "node .local/verification/verify-verse-fit.mjs"]
 
 [tasks."cache:import-samples"]
 description = "Seed the 30-day development response cache from saved API.Bible samples without network access"
@@ -112,7 +114,7 @@ run = "bun x --no-install vitest run tests/integration"
 
 [tasks."test:browser"]
 description = "Verify Chromium/WebKit routes, mobile menus and recovery with invented responses (dev:web first)"
-run = "bun scripts/verify-browser.ts"
+run = ["bun build scripts/verify-browser.ts --target=node --packages=external --outfile=.local/verification/verify-browser.mjs", "node .local/verification/verify-browser.mjs"]
 
 [tasks."smoke:csb"]
 description = "Opt-in real CSB API/cache/React smoke test (dev and saved samples required)"

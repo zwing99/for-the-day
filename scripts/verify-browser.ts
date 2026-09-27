@@ -1,6 +1,7 @@
 import { strictEqual } from "node:assert";
 import { chromium, webkit } from "playwright";
 import { semanticFixture } from "../tests/fixtures/semantic-chapter.js";
+import { assertReaderGeometry, settledReader } from "./reader-geometry.js";
 
 const origin = `http://127.0.0.1:${process.env.WEB_PORT ?? 5173}`;
 for (const [name, engine] of [
@@ -55,8 +56,31 @@ for (const [name, engine] of [
 				await page
 					.locator("[data-active-verse='b']")
 					.waitFor({ state: "attached" });
+				await settledReader(page);
+				await assertReaderGeometry(page);
+				await page.setViewportSize({ width: width + 10, height: height + 10 });
+				await page.waitForTimeout(400);
+				strictEqual(
+					await page
+						.locator("[data-active-verse]")
+						.getAttribute("data-active-verse"),
+					"b",
+				);
+				await assertReaderGeometry(page);
+				await page.setViewportSize({ width, height });
+				await page.waitForTimeout(400);
 				await page.getByRole("button", { name: "Open reader menu" }).click();
 				await page.getByRole("dialog").waitFor();
+				strictEqual(
+					await page.evaluate(() =>
+						[
+							...document.querySelectorAll(
+								"dialog button, dialog select, dialog .check-field, .menu-trigger",
+							),
+						].every((element) => element.getBoundingClientRect().height >= 44),
+					),
+					true,
+				);
 				strictEqual(
 					await page.evaluate(
 						"document.documentElement.scrollWidth <= innerWidth",
@@ -85,8 +109,10 @@ for (const [name, engine] of [
 		console.log(
 			`${name}: 20 responsive route/menu cases and failure recovery passed; no provider requests.`,
 		);
-	} catch {
-		throw new Error(`${name} browser verification failed at ${checkpoint}.`);
+	} catch (cause) {
+		throw new Error(`${name} browser verification failed at ${checkpoint}.`, {
+			cause,
+		});
 	} finally {
 		await browser.close();
 	}

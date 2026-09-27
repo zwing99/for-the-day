@@ -1,0 +1,140 @@
+.reader-menu {
+	box-sizing: border-box;
+	border: 1px solid var(--reader-border);
+	border-radius: 0.5rem 0.5rem 0 0;
+	background: var(--reader-background);
+	color: var(--reader-text);
+	font-family: system-ui, sans-serif;
+	width: min(100%, 34rem);
+	max-width: 100%;
+	max-height: 88dvh;
+	margin: auto auto 0;
+	padding: 1.25rem max(1.25rem, env(safe-area-inset-left))
+		max(1.25rem, env(safe-area-inset-bottom));
+}
+
+.reader-menu::backdrop {
+	background: rgb(0 0 0 / 0.35);
+}
+
+.reader-menu header {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+}
+
+.reader-menu h2 {
+	font-size: 1.25rem;
+	font-weight: 500;
+}
+
+.reader-menu h3 {
+	font-size: 0.8rem;
+	font-weight: 500;
+	color: var(--reader-muted);
+	margin-top: 1.75rem;
+}
+
+.reader-menu label {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.35rem 1rem;
+	min-height: 48px;
+	font-size: 0.9rem;
+}
+
+.reader-menu select {
+	/* WebKit's native select appearance can ignore minimum height. */
+	appearance: none;
+	box-sizing: border-box;
+	height: 44px;
+	min-height: 44px;
+	min-width: 3.25rem;
+	max-width: 65%;
+	margin-inline-start: auto;
+	font: inherit;
+	color: inherit;
+	background: var(--reader-background);
+	border: 1px solid var(--reader-muted);
+	border-radius: 0.25rem;
+	padding: 0.35rem 1.75rem 0.35rem 0.6rem;
+}
+
+.reader-menu label:has(select) {
+	position: relative;
+}
+
+.reader-menu label:has(select)::after {
+	content: "";
+	position: absolute;
+	right: 0.7rem;
+	bottom: calc(22px - 0.2rem);
+	width: 0.4rem;
+	height: 0.4rem;
+	border-right: 1.5px solid currentColor;
+	border-bottom: 1.5px solid currentColor;
+	transform: rotate(45deg);
+	pointer-events: none;
+}
+
+.reader-menu .check-field {
+	justify-content: flex-start;
+}
+
+.reader-menu input {
+	width: 20px;
+	height: 20px;
+}
+
+.menu-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem 0.75rem;
+}
+
+.reader-menu button {
+	font-size: 0.85rem;
+	border-color: var(--reader-muted);
+}
+
+.reader-menu button:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
+.menu-note {
+	font-size: 0.75rem;
+	line-height: 1.5;
+	color: var(--reader-muted);
+}
+
+.reader-menu .attribution {
+	padding-inline: 0;
+}
+
+.reader-menu .manual-link {
+	align-items: stretch;
+	flex-direction: column;
+	gap: 0.35rem;
+}
+
+.reader-menu .manual-link input {
+	box-sizing: border-box;
+	width: 100%;
+	height: 44px;
+	font: inherit;
+	color: inherit;
+	background: var(--reader-background);
+	border: 1px solid var(--reader-muted);
+}
+
+@media (min-width: 600px) {
+	.reader-menu {
+		margin: auto;
+		border-radius: 0.5rem;
+	}
+}

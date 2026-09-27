@@ -1,0 +1,99 @@
+/* ReadingSurface produces unitless --presentation-scale for intro/end pages.
+   An absent scale defaults to 1, including attribution inside the menu. */
+:where(.reader-shell, #fit-surface) p {
+	font-size: 1.125rem;
+	line-height: 1.7;
+}
+.eyebrow {
+	font-family: system-ui, sans-serif;
+	font-size: 0.8rem;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+}
+.attribution {
+	font-family: system-ui, sans-serif;
+	font-size: 0.875rem;
+	padding-block: 1.5rem;
+	color: var(--reader-muted);
+}
+.attribution p {
+	font-size: 0.875rem;
+	white-space: pre-wrap;
+}
+
+.intro {
+	font-family: var(--font-scripture);
+}
+.intro-literature {
+	width: 100%;
+	margin-block: auto;
+}
+.intro h1 {
+	font-size: calc(clamp(2rem, 6vw, 3rem) * var(--presentation-scale, 1));
+	font-weight: 400;
+	line-height: 1.15;
+	margin-block: calc(0.6rem * var(--presentation-scale, 1))
+		calc(1.25rem * var(--presentation-scale, 1));
+}
+.gesture-hint {
+	font-family: system-ui, sans-serif;
+	color: var(--reader-muted);
+	max-width: 22rem;
+}
+
+.text-action {
+	border: 0;
+	padding-inline: 0;
+	font-size: 0.85rem;
+	color: var(--reader-muted);
+}
+
+.reading-scroll > .attribution,
+.reading-scroll > .attribution p {
+	font-size: calc(0.875rem * var(--presentation-scale, 1));
+}
+
+.intro p,
+.intro .semantic-title,
+.intro .semantic-heading {
+	font-size: calc(1.15rem * var(--presentation-scale, 1));
+}
+
+.intro .eyebrow,
+.intro .gesture-hint {
+	font-size: calc(0.8rem * var(--presentation-scale, 1));
+}
+
+.intro .gesture-hint {
+	margin-top: calc(2rem * var(--presentation-scale, 1));
+}
+
+.reading-scroll > .reader-recovery,
+.reading-scroll > .reader-loading {
+	padding-block: 3rem;
+}
+.reader-recovery,
+.reader-loading {
+	font-family: system-ui, sans-serif;
+	color: var(--reader-text);
+}
+
+.reader-recovery p,
+.reader-loading {
+	max-width: 28rem;
+	font-size: 1rem;
+	line-height: 1.6;
+}
+
+.reader-recovery .recovery-guidance {
+	color: var(--reader-muted);
+	font-size: 0.875rem;
+}
+
+.reader-recovery a {
+	display: inline-flex;
+	align-items: center;
+	min-height: 44px;
+	color: var(--reader-text);
+	text-underline-offset: 0.2em;
+}

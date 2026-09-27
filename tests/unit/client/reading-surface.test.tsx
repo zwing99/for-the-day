@@ -212,7 +212,7 @@ it("offers keyboard card navigation and honors reduced motion", () => {
 		(
 			container.querySelector("[data-active-verse]") as HTMLElement
 		).style.getPropertyValue("--reader-font-size"),
-	).toBe("var(--scripture-size-large, 1.5rem)");
+	).toBe("var(--scripture-size-large)");
 	fireEvent.keyDown(container.querySelector("article")!, { key: "ArrowDown" });
 	expect(scroll).toHaveBeenCalledWith({ block: "start", behavior: "instant" });
 	expect(document.activeElement).toBe(container.querySelectorAll("article")[1]);

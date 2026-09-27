@@ -10,15 +10,15 @@ import {
 } from "react";
 import {
 	type Density,
-	type PackedCard,
 	layoutBudget,
+	type PackedCard,
 	packChapter,
 	reduceOverflowingGroups,
 	verseCards,
 } from "../domain/card-packing.js";
 import type { SemanticChapter } from "../domain/semantic-chapter.js";
-import { interactiveTarget } from "./passage-gesture.js";
 import { minimumFittingScale } from "./page-fitting.js";
+import { interactiveTarget } from "./passage-gesture.js";
 import { ChapterCards } from "./semantic-renderer.js";
 
 /** Pick the last semantic marker above the reading line, including inside tall cards. */
@@ -86,6 +86,7 @@ export function ReadingSurface({
 	const anchor = useRef(active);
 	anchor.current = active;
 	const priorRestore = useRef<number | undefined>(undefined);
+	const completedRestore = useRef<number | undefined>(undefined);
 	const [budget, setBudget] = useState({ columns: 28, lines: 16 });
 	const [surfaceSize, setSurfaceSize] = useState({ width: 0, height: 0 });
 	const [layoutOverride, setLayoutOverride] = useState<{
@@ -300,8 +301,10 @@ export function ReadingSurface({
 		const frame = requestAnimationFrame(() => {
 			second = requestAnimationFrame(() => {
 				restoring.current = false;
-				if (navigation) callbacks.current.onReady?.();
-				else if (wanted) callbacks.current.onLocation?.(wanted);
+				if (completedRestore.current !== restoreId) {
+					completedRestore.current = restoreId;
+					callbacks.current.onReady?.();
+				} else if (wanted) callbacks.current.onLocation?.(wanted);
 			});
 		});
 		return () => {

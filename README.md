@@ -2,6 +2,8 @@
 
 A localhost Psalms and Proverbs reader. The current CSB milestone has a reading-first card feed, native scrolling, deliberate passage swipes, independent saved locations, and a quiet reader menu for navigation and presentation settings. NIV/NLT/ESV provider integration, translation continuity, and the PWA remain in progress. See [the interface guide](docs/reading-first-interface.md) for controls and verification.
 
+Navigation tasks 6.1–6.5 are complete: explicit links override saved progress, each passage retains its own logical location, and Back/Forward restores reading positions. Use passage indicators or the menu's previous/next and direct-selection controls without gestures. In the reading surface, left/right arrows change passages and up/down or PageUp/PageDown move between aligned pages. Settings, text selection, and native zoom retain their browser behavior. See [the navigation guide](docs/reader-navigation.md) for URL and persistence details.
+
 ## Local development
 
 Install [mise](https://mise.jdx.dev/) and Docker Desktop, then run:
@@ -16,6 +18,14 @@ mise run dev
 Setup installs the Bun lockfile, creates `.env` only if absent, starts DynamoDB Local, and initializes its table. Existing credentials are preserved. No AWS account is needed. API.Bible edition IDs depend on your account's CSB/NIV/NLT access; Crossway uses a separate key. Never put these secrets in `VITE_*` variables. Missing credentials will remain an explicit setup error rather than supply bundled Scripture.
 
 The frontend binds to `127.0.0.1:5173` and proxies `/api` to the Hono listener on `127.0.0.1:8787`. DynamoDB Local binds to `127.0.0.1:8000`. Override ports in `.env`; keep `DYNAMODB_ENDPOINT` aligned with `DYNAMODB_PORT`. The server only accepts a loopback database endpoint and uses fixed dummy credentials.
+
+For phone testing, stop the running dev process and run:
+
+```sh
+mise run host
+```
+
+Connect your phone to the same Wi-Fi network and open the printed `http://<local-ip>:5173` URL (or your configured `WEB_PORT`). If multiple addresses are printed, use your computer's Wi-Fi address. This task exposes Vite on the local network; Hono and DynamoDB remain on loopback, with API requests forwarded through Vite. Ctrl-C stops both application processes. If the phone cannot connect, allow the process through your computer's firewall and check that the Wi-Fi network permits devices to communicate.
 
 `mise run dev` supervises the frontend and API; Ctrl-C stops both. The database volume persists. `mise run db:stop` stops the local database without deleting data. `mise run db:start` starts it, and `mise run db:init` runs the pinned official AWS CLI one-shot Compose container. That container waits for readiness, creates the table if absent, and waits until active; repeated initialization is safe. Its endpoint is fixed to `http://dynamodb:8000` inside Compose, regardless of the host port. It mounts no AWS credentials. Both Docker images are version-pinned. The DynamoDB process runs as root inside this local container to write the initially root-owned named volume.
 
@@ -42,6 +52,7 @@ Use `mise tasks` to discover the command surface. Package scripts do not duplica
 | `configure:envrc` | Prompt for provider credentials and create a private `.envrc` |
 | `setup` | Install locked dependencies and prepare configuration/database |
 | `dev` | Prepare database and supervise Vite/Hono |
+| `host` | Run on the local network and print phone testing URLs |
 | `dev:web`, `dev:api` | Run individual local processes |
 | `test` | Fast Docker-independent unit tests |
 | `test:domain` | Focused pure domain tests |
@@ -63,6 +74,8 @@ Cache/API behavior and the latest verification checkpoint are in [docs/chapter-a
 Raw provider responses belong only in ignored `.local/provider-samples/`. Commit invented-text fixtures rather than copyrighted Scripture or credentials. Use `test:integration` for isolated DynamoDB checks and `smoke:csb` for opt-in live checks while dev runs; browser verification works through the standalone Playwright MCP.
 
 ## Verification record
+
+Latest checkpoint (2026-09-26): `mise run check` passes 163 unit/component tests plus typechecking, lint, and formatting. The production build and OpenSpec validation pass. Chromium checks cover independent passage restoration, reload/shared URLs, Back/Forward, trusted touch gestures, selection/zoom exclusions, non-gesture controls, and phone/tablet/short-landscape page alignment. `mise run host` was verified with alternate ports, a printed LAN URL, and a successful `/api/health` request through that address. WebKit and physical iPhone/iPad Safari checks remain pending. The initial reader change has 26/53 tasks complete; semantic packing verification, remaining translations, PWA work, and final acceptance remain in progress.
 
 Block 1 command-surface verification: `mise tasks` lists the documented tasks; `mise run check` passed all 140 unit/component tests and type/lint/format checks, and `mise run build` passed. Starting `mise run dev` initialized the existing local table and served a healthy `/api/health` response through Vite. Ctrl-C released both ports 5173 and 8787, as verified with `lsof`; DynamoDB remained available as intended.
 

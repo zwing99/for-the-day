@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import {
 	ReadingSurface,
@@ -12,6 +12,50 @@ import { semanticFixture } from "../../fixtures/semantic-chapter.js";
 
 afterEach(cleanup);
 afterEach(() => vi.restoreAllMocks());
+it("completes restoration once when layout changes before the readiness frames finish", () => {
+	const frames = new Map<number, FrameRequestCallback>();
+	let sequence = 0;
+	vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+		frames.set(++sequence, callback);
+		return sequence;
+	});
+	vi.spyOn(window, "cancelAnimationFrame").mockImplementation((id) => {
+		frames.delete(id);
+	});
+	const chapter = semanticFixture();
+	const onReady = vi.fn();
+	const onLocation = vi.fn();
+	const content = (fontSize: "normal" | "large") => (
+		<main>
+			<ReadingSurface
+				chapter={chapter}
+				targetKey="b"
+				restoreId={1}
+				fontSize={fontSize}
+				onReady={onReady}
+				onLocation={onLocation}
+			/>
+		</main>
+	);
+	const view = render(content("normal"));
+	view.rerender(content("large"));
+	expect(onReady).not.toHaveBeenCalled();
+	expect(onLocation).not.toHaveBeenCalled();
+	act(() => {
+		while (frames.size) {
+			const pending = [...frames.values()];
+			frames.clear();
+			for (const callback of pending) callback(0);
+		}
+	});
+	expect(onReady).toHaveBeenCalledTimes(1);
+	expect(onLocation).not.toHaveBeenCalled();
+	expect(
+		view.container
+			.querySelector("[data-active-verse]")
+			?.getAttribute("data-active-verse"),
+	).toBe("b");
+});
 it.each(["ArrowUp", "ArrowDown", "PageUp", "PageDown"])(
 	"leaves %s to the browser while text is selected",
 	(key) => {

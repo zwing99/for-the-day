@@ -112,7 +112,7 @@ it("cancels obsolete requests and refuses late responses after passage changes",
 		| ((value: ReturnType<typeof semanticFixture>) => void)
 		| undefined;
 	const source = {
-		get: vi.fn((p: Passage) =>
+		get: vi.fn((p: Passage, _signal: AbortSignal) =>
 			p.chapter === 7
 				? new Promise<ReturnType<typeof semanticFixture>>((resolve) => {
 						resolveOld = resolve;
@@ -130,6 +130,7 @@ it("cancels obsolete requests and refuses late responses after passage changes",
 		"Psalm 37",
 	);
 	expect(source.get.mock.calls[0]?.[0].chapter).toBe(7);
+	expect(source.get.mock.calls[0]?.[1].aborted).toBe(true);
 });
 it("ignores passage shortcuts on controls and bounds passage ends", async () => {
 	const source = { get: vi.fn(async (p: Passage) => chapterFor(p)) };

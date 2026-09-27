@@ -41,6 +41,71 @@ const source = () => ({
 const openMenu = () =>
 	fireEvent.click(screen.getByRole("button", { name: "Open reader menu" }));
 
+it("reaches every passage through menu controls and direct selection with bounded ends", async () => {
+	const api = source();
+	render(
+		<Reader source={api} storage={new ReadingStorage()} report={vi.fn()} />,
+	);
+	await screen.findByRole("article", { name: "Verse 2" });
+	for (const chapter of [37, 67, 97, 127, 7]) {
+		openMenu();
+		fireEvent.click(screen.getByRole("button", { name: "Next passage" }));
+		await waitFor(() =>
+			expect(api.get.mock.calls.at(-1)?.[0]).toMatchObject({
+				book: chapter === 7 ? "PRO" : "PSA",
+				chapter,
+			}),
+		);
+		await screen.findByRole("button", { name: "Begin reading" });
+	}
+	openMenu();
+	expect(
+		screen
+			.getByRole("button", { name: "Next passage" })
+			.hasAttribute("disabled"),
+	).toBe(true);
+	fireEvent.click(screen.getByRole("button", { name: "Previous passage" }));
+	await waitFor(() => expect(api.get.mock.calls.at(-1)?.[0].chapter).toBe(127));
+	await screen.findByRole("button", { name: "Begin reading" });
+	openMenu();
+	fireEvent.change(
+		screen.getByRole("combobox", { name: "Passage", exact: true }),
+		{ target: { value: "0" } },
+	);
+	await screen.findByRole("article", { name: "Verse 2" });
+	expect(window.location.pathname).toMatch(/^\/7\/psalm\/7/);
+	openMenu();
+	expect(
+		screen
+			.getByRole("button", { name: "Previous passage" })
+			.hasAttribute("disabled"),
+	).toBe(true);
+});
+
+it.each([
+	"ArrowLeft",
+	"ArrowRight",
+	"ArrowUp",
+	"ArrowDown",
+	"PageUp",
+	"PageDown",
+])("leaves %s available to settings and form controls", async (key) => {
+	const api = source();
+	render(
+		<Reader source={api} storage={new ReadingStorage()} report={vi.fn()} />,
+	);
+	await screen.findByRole("article", { name: "Verse 2" });
+	openMenu();
+	const before = window.location.href;
+	expect(
+		fireEvent.keyDown(screen.getByRole("combobox", { name: "Density" }), {
+			key,
+		}),
+	).toBe(true);
+	expect(window.location.href).toBe(before);
+	expect(api.get).toHaveBeenCalledTimes(1);
+});
+
 it("keeps the menu usable during rate-limit recovery and respects the retry cooldown", async () => {
 	vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
 	const api = {

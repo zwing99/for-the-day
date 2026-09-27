@@ -46,6 +46,10 @@ run = ["bun install --frozen-lockfile", "bun scripts/setup.ts", "mise run db:sta
 description = "Prepare database and supervise frontend/API; Ctrl-C stops both"
 run = ["mise run db:start", "mise run db:init", "bun scripts/dev.ts"]
 
+[tasks.host]
+description = "Run the reader on your local network and print phone testing URLs"
+run = ["mise run db:start", "mise run db:init", "bun scripts/dev.ts --host"]
+
 [tasks.preview]
 description = "Serve the production build and API locally (build first)"
 run = ["mise run db:start", "mise run db:init", "bun scripts/dev.ts --preview"]

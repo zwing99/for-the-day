@@ -44,6 +44,8 @@ export function Reader({
 	const [preferences, setPreferences] = useState(() =>
 		repository.preferences(),
 	);
+	const preferencesRef = useRef(preferences);
+	preferencesRef.current = preferences;
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [drag, setDrag] = useState<PassageDrag>({ phase: "idle", offset: 0 });
 	const stage = useRef<HTMLDivElement>(null);
@@ -57,7 +59,7 @@ export function Reader({
 	function readRoute() {
 		try {
 			const url = new URL(window.location.href);
-			let route = parseReaderRoute(url, preferences.translation);
+			let route = parseReaderRoute(url, preferencesRef.current.translation);
 			if (url.pathname === "/" || /^\/\d+$/.test(url.pathname)) {
 				const hint = repository.activePassage(route.day);
 				if (hint) route = { ...route, book: hint.book, chapter: hint.chapter };
@@ -74,6 +76,8 @@ export function Reader({
 		}
 	}
 	const [navigation, setNavigation] = useState(readRoute);
+	const activeNavigation = useRef(navigation.id);
+	const readyNavigation = useRef<number | undefined>(undefined);
 	const route = navigation.route;
 	const key = route ? identity(route) : "invalid";
 	const [result, setResult] = useState<{
@@ -90,6 +94,9 @@ export function Reader({
 	}
 	function navigate(next: ReaderRoute, replace = false) {
 		flush();
+		const id = ++activationSequence;
+		activeNavigation.current = id;
+		readyNavigation.current = undefined;
 		current.current = undefined;
 		setVisibleLocation(undefined);
 		window.history[replace ? "replaceState" : "pushState"](
@@ -97,14 +104,17 @@ export function Reader({
 			"",
 			readerPath(next),
 		);
-		setNavigation({ route: next, id: ++activationSequence });
+		setNavigation({ route: next, id });
 	}
 	useEffect(() => {
 		const pop = () => {
 			flush();
+			const next = readRoute();
+			activeNavigation.current = next.id;
+			readyNavigation.current = undefined;
 			current.current = undefined;
 			setVisibleLocation(undefined);
-			setNavigation(readRoute());
+			setNavigation(next);
 		};
 		const hidden = () => {
 			if (document.visibilityState === "hidden") flush();
@@ -200,9 +210,6 @@ export function Reader({
 		repository.savePosition(next);
 		window.history.replaceState(null, "", readerPath(next));
 	}
-	useEffect(() => {
-		if (intro && location && !routeError) record(location);
-	}, [navigation.id, intro, chapter]);
 	const plan = route ? readingPlan(route.day) : [];
 	const index = plan.findIndex(
 		(p) => p.book === route?.book && p.chapter === route?.chapter,
@@ -384,8 +391,17 @@ export function Reader({
 										</article>
 									) : undefined
 								}
-								onReady={() => record(location!)}
+								onReady={() => {
+									if (activeNavigation.current !== navigation.id) return;
+									readyNavigation.current = navigation.id;
+									record(location!);
+								}}
 								onLocation={(verseKey) => {
+									if (
+										activeNavigation.current !== navigation.id ||
+										readyNavigation.current !== navigation.id
+									)
+										return;
 									if (verseKey === "intro") {
 										record({ ...route!, location: "intro", orgIds: undefined });
 										return;

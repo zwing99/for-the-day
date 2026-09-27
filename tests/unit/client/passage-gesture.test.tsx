@@ -151,6 +151,73 @@ it("preserves active text selection", () => {
 	expect(change).not.toHaveBeenCalled();
 	selection.mockRestore();
 });
+it.each(["zoom", "blur", "selection"])(
+	"cancels a pending horizontal wheel gesture on %s without preventing native input",
+	(kind) => {
+		vi.useFakeTimers();
+		const change = vi.fn();
+		const progress = vi.fn();
+		const { container } = render(
+			<Harness change={change} progress={progress} />,
+		);
+		const main = container.querySelector("main")!;
+		expect(fireEvent.wheel(main, { deltaX: 80, deltaY: 2 })).toBe(true);
+		if (kind === "zoom")
+			expect(fireEvent.wheel(main, { deltaY: -20, ctrlKey: true })).toBe(true);
+		else if (kind === "blur") fireEvent(window, new Event("blur"));
+		else {
+			vi.spyOn(window, "getSelection").mockReturnValue({
+				toString: () => "selected",
+			} as Selection);
+			fireEvent(document, new Event("selectionchange"));
+		}
+		act(() => vi.advanceTimersByTime(500));
+		expect(change).not.toHaveBeenCalled();
+		expect(progress).toHaveBeenLastCalledWith({ phase: "idle", offset: 0 });
+	},
+);
+
+it("shows a rightward drag and commits the previous passage once", () => {
+	vi.useFakeTimers();
+	const change = vi.fn();
+	const progress = vi.fn();
+	const { container } = render(<Harness change={change} progress={progress} />);
+	const main = container.querySelector("main")!;
+	fireEvent.touchStart(main, { touches: [touch(100, 100)] });
+	expect(fireEvent.touchMove(main, { touches: [touch(200, 105)] })).toBe(true);
+	expect(progress).toHaveBeenLastCalledWith({
+		phase: "dragging",
+		direction: -1,
+		offset: 100,
+	});
+	fireEvent.touchEnd(main, { touches: [], changedTouches: [touch(200, 105)] });
+	expect(progress).toHaveBeenLastCalledWith({
+		phase: "settling",
+		direction: -1,
+		offset: 390,
+	});
+	act(() => vi.advanceTimersByTime(180));
+	expect(change).toHaveBeenCalledExactlyOnceWith(-1);
+});
+
+it("visibly returns a short horizontal drag without navigation", () => {
+	vi.useFakeTimers();
+	const change = vi.fn();
+	const progress = vi.fn();
+	const { container } = render(<Harness change={change} progress={progress} />);
+	const main = container.querySelector("main")!;
+	fireEvent.touchStart(main, { touches: [touch(200, 100)] });
+	fireEvent.touchMove(main, { touches: [touch(170, 100)] });
+	fireEvent.touchEnd(main, { touches: [], changedTouches: [touch(170, 100)] });
+	expect(progress).toHaveBeenLastCalledWith({
+		phase: "settling",
+		direction: 1,
+		offset: 0,
+	});
+	act(() => vi.advanceTimersByTime(180));
+	expect(change).not.toHaveBeenCalled();
+	expect(progress).toHaveBeenLastCalledWith({ phase: "idle", offset: 0 });
+});
 it("commits immediately without settling when reduced motion is requested", () => {
 	vi.stubGlobal("matchMedia", () => ({ matches: true }));
 	const change = vi.fn(),

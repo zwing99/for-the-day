@@ -51,10 +51,12 @@ export function usePassageGesture(
 		};
 		window.addEventListener("resize", reset);
 		document.addEventListener("selectionchange", selection);
+		window.addEventListener("blur", reset);
 		return () => {
 			clearTimeout(timer.current);
 			window.removeEventListener("resize", reset);
 			document.removeEventListener("selectionchange", selection);
+			window.removeEventListener("blur", reset);
 		};
 	}, [options.disabled, options.resetKey]);
 	function progress(x: number, y: number) {
@@ -185,6 +187,10 @@ export function usePassageGesture(
 			if (gesture) release(gesture.x, gesture.y, performance.now(), true);
 		},
 		onWheel(event: WheelEvent) {
+			if (event.ctrlKey) {
+				reset();
+				return;
+			}
 			const now = event.timeStamp;
 			const quiet = now - lastWheel.current > 180;
 			lastWheel.current = now;
@@ -195,7 +201,6 @@ export function usePassageGesture(
 			if (
 				options.disabled ||
 				settling.current ||
-				event.ctrlKey ||
 				interactiveTarget(event.target) ||
 				selected()
 			)

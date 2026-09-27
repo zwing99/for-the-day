@@ -4,6 +4,20 @@ import { networkChapterSource } from "../../../src/client/chapter-source.js";
 import { semanticFixture } from "../../fixtures/semantic-chapter.js";
 
 afterEach(() => vi.unstubAllGlobals());
+it("offers connection-required recovery without persisting an offline chapter", async () => {
+	vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("offline")));
+	vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+	await expect(
+		networkChapterSource.get(
+			{ book: "PSA", chapter: 23 },
+			new AbortController().signal,
+		),
+	).rejects.toMatchObject({
+		code: "offline",
+		message: "Scripture requires a connection. Reconnect, then try again.",
+	});
+	vi.restoreAllMocks();
+});
 it("fetches only the requested ESV chapter, without background prefetch or browser persistence", async () => {
 	const mock = vi.fn<typeof fetch>().mockImplementation(async (input) => {
 		const c = semanticFixture();

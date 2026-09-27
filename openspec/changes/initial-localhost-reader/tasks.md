@@ -81,9 +81,11 @@ Block 10 verification is recorded in [the reader guide](../../../docs/reading-fi
 
 ## 11. PWA application-shell foundation
 
-- [ ] 11.1 Add manifest, mobile/install metadata, and appropriately sized icons with built-app localhost preview support; verify manifest/icon responses, standalone foundation, and deep-link preview behavior through `mise run build` and `mise run preview`.
-- [ ] 11.2 Add versioned static-shell/font/asset service-worker caching with explicit API/provider/FUMS exclusions and development registration controls; verify browser tests prove that no Scripture response is in Cache Storage, IndexedDB, or localStorage and hot reload is not masked by a stale worker.
-- [ ] 11.3 Add shell-only offline recovery and non-disruptive version activation/cache cleanup; verify cached-shell deep links offline, connection-required Scripture states, and updates without forced mid-reading reload; document supported PWA behavior and the absence of offline Scripture guarantees.
+- [x] 11.1 Add manifest, mobile/install metadata, and appropriately sized icons with built-app localhost preview support; verify manifest/icon responses, standalone foundation, and deep-link preview behavior through `mise run build` and `mise run preview`.
+- [x] 11.2 Add versioned static-shell/font/asset service-worker caching with explicit API/provider/FUMS exclusions and development registration controls; verify browser tests prove that no Scripture response is in Cache Storage, IndexedDB, or localStorage and hot reload is not masked by a stale worker.
+- [x] 11.3 Add shell-only offline recovery and non-disruptive version activation/cache cleanup; verify cached-shell deep links offline, connection-required Scripture states, and updates without forced mid-reading reload; document supported PWA behavior and the absence of offline Scripture guarantees.
+
+Block 11 verification is recorded in [PWA behavior](../../../docs/pwa.md#block-11-verification--2026-09-27). Chromium verified static-only storage, offline deep links/retry, waiting updates/cleanup, and same-origin dev worker retirement using invented mocks. No live Scripture/tracking requests were made. Physical installation and the iPhone status-bar correction need device confirmation in block 12.
 
 ## 12. Visual and accessibility refinement
 

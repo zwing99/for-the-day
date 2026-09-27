@@ -42,6 +42,16 @@
 body {
 	margin: 0;
 }
+:root[data-browser-appearance="dark"] {
+	background: #222320;
+	color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+	:root:not([data-browser-appearance]) {
+		background: #222320;
+		color-scheme: dark;
+	}
+}
 main {
 	height: 100vh;
 	height: 100dvh;
@@ -216,6 +226,19 @@ body {
 	gap: 1rem;
 	font-family: system-ui, sans-serif;
 	color: var(--reader-muted);
+	background: var(--reader-background);
+}
+/* Shift only header contents; keep the reading surface and bottom row in place. */
+@supports (-webkit-touch-callout: none) {
+	@media (display-mode: standalone) and (orientation: portrait) and (
+			min-height: 601px
+		) {
+		.reader-context > div,
+		.reader-context > .menu-trigger {
+			position: relative;
+			top: 10px;
+		}
+	}
 }
 .reader-brand {
 	font-size: 0.7rem;

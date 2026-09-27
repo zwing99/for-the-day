@@ -20,7 +20,7 @@ The reader opens to today. You can choose another day, return to Today, or revis
 - Use a keyboard, select text, and zoom with familiar browser controls.
 - Share your current location or copy its link from the reader menu.
 
-CSB, NIV, NLT, and ESV are available locally with configured provider access. The installable app is still in progress.
+CSB, NIV, NLT, and ESV are available locally with configured provider access. The built app supports installation and can open its reader shell offline; Scripture requires a connection.
 
 ## Try it on your computer
 
@@ -44,6 +44,8 @@ You'll need [mise](https://mise.jdx.dev/), Docker Desktop running, and API.Bible
 4. Open [localhost:5173](http://localhost:5173) in your browser. Press Ctrl-C in the terminal when you're done.
 
 To read on your phone, stop the app and run `mise run host`. Connect your phone to the same Wi-Fi network and open the address printed in the terminal.
+
+To try the installable build on your computer, run `mise run build`, then `mise run preview`, and open [localhost:4173](http://localhost:4173). See [PWA behavior](docs/pwa.md) for offline and update details.
 
 ## Explore further
 

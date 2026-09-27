@@ -70,6 +70,8 @@ Use `mise tasks` to discover the command surface. Package scripts do not duplica
 
 Cache/API behavior and the latest verification checkpoint are in [docs/chapter-api-cache.md](chapter-api-cache.md).
 
+The built preview includes the installable static shell. See [PWA behavior and verification](pwa.md) for offline recovery, exclusions, safe updates and development cleanup. `mise run host` uses plain HTTP for phone interaction testing; service-worker installation needs localhost/loopback or a secure origin.
+
 Local development reuses raw API.Bible responses from `.local/provider-response-cache/` for 30 days. This directory is Git-ignored and responses survive normalizer changes. The local listener and CSB inspection task consult it before upstream requests. Import existing samples with `mise run cache:import-samples`; layout verification uses this cache without falling back to live provider calls. New interactive chapter requests can still use API quota on a cache miss. ESV retains its separate bounded cache policy.
 
 Raw provider responses belong only in ignored `.local/provider-samples/`. Commit invented-text fixtures rather than copyrighted Scripture or credentials. Use `test:integration` for isolated DynamoDB checks and `smoke:csb` for opt-in live checks while dev runs; browser verification works through the standalone Playwright MCP.

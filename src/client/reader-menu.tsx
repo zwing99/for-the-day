@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { currentLocalDay, type Passage } from "../domain/reading-plan.js";
 import type { SemanticChapter } from "../domain/semantic-chapter.js";
+import { PwaUpdateNotice } from "./pwa-update-notice.js";
 import type { Preferences } from "./reading-storage.js";
 import { Attribution } from "./semantic-renderer.js";
 import { ShareLink } from "./share-link.js";
@@ -265,6 +266,7 @@ export function ReaderMenu({
 						</label>
 					</section>
 					{getLink && <ShareLink getLink={getLink} />}
+					<PwaUpdateNotice />
 					{chapter && <Attribution chapter={chapter} />}
 				</>
 			)}

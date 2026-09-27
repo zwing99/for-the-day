@@ -39,8 +39,10 @@ export const networkChapterSource: ChapterSource = {
 		} catch {
 			if (signal.aborted) throw new DOMException("Cancelled.", "AbortError");
 			throw new ChapterLoadError(
-				"network",
-				"Connect to the local server, then try again.",
+				navigator.onLine === false ? "offline" : "network",
+				navigator.onLine === false
+					? "Scripture requires a connection. Reconnect, then try again."
+					: "Connect to the local server, then try again.",
 			);
 		}
 		const body = await response.json();

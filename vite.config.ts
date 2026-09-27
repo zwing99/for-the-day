@@ -1,9 +1,10 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import { shellPwa } from "./scripts/pwa-build.js";
 
 const apiPort = process.env.API_PORT ?? "8787";
 export default defineConfig({
-	plugins: [react()],
+	plugins: [react(), shellPwa()],
 	server: {
 		fs: {
 			deny: [".env", ".env.*", "*.{crt,pem}", "**/.git/**", "**/.local/**"],

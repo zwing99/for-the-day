@@ -12,6 +12,7 @@ import type {
 	Translation,
 } from "../domain/semantic-chapter.js";
 import { mapTranslationLocation } from "../domain/translation-location.js";
+import { useBrowserAppearance } from "./browser-appearance.js";
 import {
 	ChapterLoadError,
 	type ChapterSource,
@@ -48,6 +49,7 @@ export function Reader({
 	const [preferences, setPreferences] = useState(() =>
 		repository.preferences(),
 	);
+	useBrowserAppearance(preferences.appearance);
 	const preferencesRef = useRef(preferences);
 	preferencesRef.current = preferences;
 	const [menuOpen, setMenuOpen] = useState(false);

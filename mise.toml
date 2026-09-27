@@ -94,6 +94,10 @@ run = "bun scripts/inspect-csb.ts"
 description = "Verify exact text and structure of existing ignored CSB samples offline"
 run = "bun scripts/verify-csb-samples.ts"
 
+[tasks."verify:provider-samples"]
+description = "Verify saved NIV/NLT/ESV source, normalization, rendering and attribution without network requests"
+run = "bun scripts/verify-provider-samples.ts"
+
 [tasks."verify:verse-fit"]
 description = "Offline CSB renderer measurement from saved responses (requires Vite and Chrome)"
 run = "bun scripts/verify-verse-fit.ts"

@@ -24,6 +24,54 @@ beforeEach(() => {
 	window.localStorage.clear();
 	window.history.replaceState(null, "", "/23/psalm/23");
 });
+it("releases inactive ESV cards on passage changes and refetches on return without persisting Scripture", async () => {
+	window.history.replaceState(null, "", "/23/psalm/23/1a?translation=ESV");
+	const source = {
+		get: vi.fn(
+			async (
+				p: { book: "PSA" | "PRO"; chapter: number },
+				_signal: AbortSignal,
+			) => {
+				const c = semanticFixture();
+				c.identity.translation = "ESV";
+				c.identity.provider = "crossway";
+				c.identity.book = p.book;
+				c.identity.chapter = p.chapter;
+				c.tracking = { kind: "none" };
+				const prefix = c.nodes[0];
+				if (prefix?.kind === "group" && prefix.children[0]?.kind === "text")
+					prefix.children[0].text = `Invented chapter-only ${p.chapter}`;
+				return c;
+			},
+		),
+	};
+	render(<Reader source={source} report={vi.fn()} />);
+	await waitFor(() =>
+		expect(
+			screen.getAllByText("Invented chapter-only 23").length,
+		).toBeGreaterThan(0),
+	);
+	fireEvent.click(screen.getByRole("button", { name: "Psalm 53" }));
+	await waitFor(() =>
+		expect(
+			screen.getAllByText("Invented chapter-only 53").length,
+		).toBeGreaterThan(0),
+	);
+	expect(screen.queryByText("Invented chapter-only 23")).toBeNull();
+	expect(source.get.mock.calls[0]![1].aborted).toBe(true);
+	fireEvent.click(screen.getByRole("button", { name: "Psalm 23" }));
+	await waitFor(() =>
+		expect(
+			screen.getAllByText("Invented chapter-only 23").length,
+		).toBeGreaterThan(0),
+	);
+	expect(screen.queryByText("Invented chapter-only 53")).toBeNull();
+	expect(source.get.mock.calls.map((c) => c[0].chapter)).toEqual([23, 53, 23]);
+	for (let i = 0; i < localStorage.length; i++)
+		expect(localStorage.getItem(localStorage.key(i)!)).not.toContain(
+			"Invented chapter-only",
+		);
+});
 describe("faithful chapter cards", () => {
 	it("renders all ordered text exactly once, retaining poetry, headings, marks and complete spans", () => {
 		const chapter = semanticFixture();

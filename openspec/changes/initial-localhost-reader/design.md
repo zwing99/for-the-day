@@ -220,6 +220,8 @@ Cross-translation mapping first intersects source/target organizational identity
 
 ### 7. Deterministic semantic packing, then measured overflow safeguards
 
+User-approved fit refinement (2026-09-27): ordinary pages retain the selected size, while occasional measured page-local shrinking is acceptable for a handful of oversized verses or attached headings, especially on the smallest devices. ESV Psalm 57:1 at 320×568, requiring scale 0.9436 and yielding 16.45px effective type, is accepted. Preserve complete content, logical location, user preferences, and native zoom. This does not permit routine global shrinking or clipping.
+
 Block 7.x verification confirms the existing pure packer and adaptive surface against the corrected page contract; see `docs/reading-surface.md` for budgets and measured results. Cards store ordered leaf IDs rather than duplicated text, and the semantic renderer reconstructs original parent paths. Unknown literary ancestors take precedence over nested recognized paragraph/stanza boundaries in Balanced/Compact grouping. Their cards carry an indivisible flag through measured overflow repair, preventing that second pass from undoing conservative atomic grouping.
 
 Keep packing pure: input chapter, density, and a quantized layout budget derived from usable width/height, font-size/line-height tokens, and reserved context/attribution space. Use deterministic estimated line costs based on text length, indentation, explicit poetry lines, and heading spacing, not browser DOM measurements or fixed verse counts. Quantize budget classes and debounce resize/repacking to prevent mobile browser chrome from reshuffling cards on every pixel change.

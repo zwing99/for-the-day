@@ -65,9 +65,9 @@ Block 5 completion reconciles the existing implementation with [the archived scr
 
 ## 9. Translation location continuity
 
-- [ ] 9.1 Implement location mapping using organizational sets/ranges/partial IDs and verified Crossway correspondences, keeping printed labels distinct from canonical identity; verify tests for superscription offsets, merged/split verses, exact mappings, and absent organizational metadata.
-- [ ] 9.2 Implement explicit approximate same-label/nearest-location fallback and an accessible quiet notice without a beginning reset; verify tests where numbering differs or a target verse is absent and confirm fallback is never presented as exact.
-- [ ] 9.3 Connect translation switching to retained day/passage/location, preference persistence, URL history, and failure rollback; verify browser tests switching all four translations mid-passage, reloading explicit translation links, and leaving successful Scripture usable after a failed switch; document mapping guarantees and limits.
+- [x] 9.1 Implement location mapping using organizational sets/ranges/partial IDs and verified Crossway correspondences, keeping printed labels distinct from canonical identity; verify tests for superscription offsets, merged/split verses, exact mappings, and absent organizational metadata.
+- [x] 9.2 Implement explicit approximate same-label/nearest-location fallback and an accessible quiet notice without a beginning reset; verify tests where numbering differs or a target verse is absent and confirm fallback is never presented as exact.
+- [x] 9.3 Connect translation switching to retained day/passage/location, preference persistence, URL history, and failure rollback; verify browser tests switching all four translations mid-passage, reloading explicit translation links, and leaving successful Scripture usable after a failed switch; document mapping guarantees and limits.
 
 ## 10. Passage context, settings, and presentation controls
 

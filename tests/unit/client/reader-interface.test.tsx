@@ -167,7 +167,7 @@ it("keeps navigation rows behind the menu and supplies named ordered passage ind
 		screen
 			.getByRole("combobox", { name: "Translation" })
 			.hasAttribute("disabled"),
-	).toBe(true);
+	).toBe(false);
 	fireEvent(
 		screen.getByRole("dialog"),
 		new Event("cancel", { bubbles: false, cancelable: true }),

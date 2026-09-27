@@ -9,6 +9,7 @@ export function ReaderMenu({
 	onClose,
 	preferences,
 	onPreferences,
+	onTranslation,
 	day,
 	plan,
 	index,
@@ -22,6 +23,7 @@ export function ReaderMenu({
 	onClose(): void;
 	preferences: Preferences;
 	onPreferences(next: Preferences): void;
+	onTranslation(translation: Preferences["translation"]): void;
 	day: number;
 	plan: Passage[];
 	index: number;
@@ -157,19 +159,20 @@ export function ReaderMenu({
 							<select
 								aria-label="Translation"
 								value={preferences.translation}
-								disabled
+								onChange={(e) =>
+									act(() =>
+										onTranslation(e.target.value as Preferences["translation"]),
+									)
+								}
 							>
 								<option value="CSB">CSB</option>
 								{["NIV", "NLT", "ESV"].map((value) => (
-									<option key={value} value={value} disabled>
-										{value} — unavailable for now
+									<option key={value} value={value}>
+										{value}
 									</option>
 								))}
 							</select>
 						</label>
-						<p className="menu-note">
-							CSB is available now. Other translations will follow.
-						</p>
 						<label>
 							Appearance
 							<select

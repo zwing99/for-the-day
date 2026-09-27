@@ -196,6 +196,19 @@ body {
 	margin-left: 0.6rem;
 	font-size: 0.7rem;
 }
+.reader-context:has(.translation-notice) {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: 0.25rem 1rem;
+}
+.translation-notice {
+	grid-column: 1 / -1;
+	font-size: 0.75rem;
+	line-height: 1.4;
+}
+.translation-notice button {
+	margin-left: 0.5rem;
+}
 .menu-trigger {
 	border: 0;
 	min-width: 44px;

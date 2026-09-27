@@ -7,7 +7,11 @@ import {
 	routeVerse,
 } from "../domain/reader-route.js";
 import { currentLocalDay, readingPlan } from "../domain/reading-plan.js";
-import type { SemanticChapter } from "../domain/semantic-chapter.js";
+import type {
+	SemanticChapter,
+	Translation,
+} from "../domain/semantic-chapter.js";
+import { mapTranslationLocation } from "../domain/translation-location.js";
 import {
 	ChapterLoadError,
 	type ChapterSource,
@@ -85,6 +89,24 @@ export function Reader({
 		key: string;
 		activation: string;
 	}>();
+	const switchRequest = useRef<AbortController | undefined>(undefined);
+	const [switching, setSwitching] = useState<Translation>();
+	const [switchFailure, setSwitchFailure] = useState<{
+		translation: Translation;
+		error: ChapterLoadError;
+	}>();
+	const [switchRetryReady, setSwitchRetryReady] = useState(true);
+	useEffect(() => {
+		const failure = switchFailure?.error;
+		setSwitchRetryReady(failure?.code !== "rate-limit");
+		if (failure?.code !== "rate-limit") return;
+		const timer = setTimeout(
+			() => setSwitchRetryReady(true),
+			(failure.retryAfterSeconds ?? 60) * 1000,
+		);
+		return () => clearTimeout(timer);
+	}, [switchFailure]);
+	const [mappingNotice, setMappingNotice] = useState(false);
 	const [error, setError] = useState<ChapterLoadError>();
 	const [attempt, setAttempt] = useState(0);
 	const [retryReady, setRetryReady] = useState(true);
@@ -93,6 +115,10 @@ export function Reader({
 		if (current.current) repository.savePosition(current.current);
 	}
 	function navigate(next: ReaderRoute, replace = false) {
+		switchRequest.current?.abort();
+		setSwitching(undefined);
+		setSwitchFailure(undefined);
+		setMappingNotice(false);
 		flush();
 		const id = ++activationSequence;
 		activeNavigation.current = id;
@@ -108,6 +134,10 @@ export function Reader({
 	}
 	useEffect(() => {
 		const pop = () => {
+			switchRequest.current?.abort();
+			setSwitching(undefined);
+			setSwitchFailure(undefined);
+			setMappingNotice(false);
 			flush();
 			const next = readRoute();
 			activeNavigation.current = next.id;
@@ -123,6 +153,7 @@ export function Reader({
 		window.addEventListener("pagehide", flush);
 		document.addEventListener("visibilitychange", hidden);
 		return () => {
+			switchRequest.current?.abort();
 			window.removeEventListener("popstate", pop);
 			window.removeEventListener("pagehide", flush);
 			document.removeEventListener("visibilitychange", hidden);
@@ -130,6 +161,7 @@ export function Reader({
 	}, [repository]);
 	useEffect(() => {
 		if (!route) return;
+		if (result?.key === key) return;
 		const controller = new AbortController();
 		setError(undefined);
 		setResult(undefined);
@@ -161,6 +193,56 @@ export function Reader({
 		return () => controller.abort();
 	}, [key, source, attempt]);
 	const chapter = result?.key === key ? result.chapter : undefined;
+	async function switchTranslation(translation: Translation) {
+		if (!route || !chapter || translation === route.translation) return;
+		switchRequest.current?.abort();
+		const controller = new AbortController();
+		switchRequest.current = controller;
+		setSwitching(translation);
+		setSwitchFailure(undefined);
+		try {
+			const nextChapter = await source.get(route, controller.signal, {
+				translation,
+				readingDay: route.day,
+				timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+			});
+			if (controller.signal.aborted) return;
+			const anchor = current.current ?? location ?? route;
+			const sourceVerse = routeVerse(chapter, anchor) ?? chapter.verses[0]!;
+			const mapped =
+				anchor.location === "intro"
+					? undefined
+					: mapTranslationLocation(chapter, sourceVerse, nextChapter);
+			const next = {
+				...anchor,
+				translation,
+				location: mapped?.verse.displayLabel ?? "intro",
+				orgIds: mapped?.verse.orgIds,
+			};
+			navigate(next);
+			setResult({
+				chapter: nextChapter,
+				key: identity(next),
+				activation: `chapter-${++activationSequence}`,
+			});
+			setMappingNotice(mapped?.approximate ?? false);
+			updatePreferences({ ...preferencesRef.current, translation });
+		} catch (failure) {
+			if (!controller.signal.aborted)
+				setSwitchFailure({
+					translation,
+					error:
+						failure instanceof ChapterLoadError
+							? failure
+							: new ChapterLoadError(
+									"unavailable",
+									"Scripture is temporarily unavailable. Please try again.",
+								),
+				});
+		} finally {
+			if (switchRequest.current === controller) setSwitching(undefined);
+		}
+	}
 	let location: ReaderRoute | undefined;
 	let routeError = navigation.error;
 	if (route && chapter) {
@@ -292,6 +374,28 @@ export function Reader({
 				>
 					<span aria-hidden="true">☰</span>
 				</button>
+				{(switching || switchFailure || mappingNotice) && (
+					<div className="translation-notice" role="status" aria-live="polite">
+						{switching ? (
+							`Loading ${switching}… You can keep reading.`
+						) : switchFailure ? (
+							<>
+								{switchFailure.error.message} Your current translation remains
+								available.
+								<button
+									disabled={!switchRetryReady}
+									onClick={() =>
+										void switchTranslation(switchFailure.translation)
+									}
+								>
+									Retry translation
+								</button>
+							</>
+						) : (
+							"Approximate verse match. Numbering differs or verified alignment is unavailable."
+						)}
+					</div>
+				)}
 			</header>
 			<div ref={stage} className="passage-stage" data-transition={drag.phase}>
 				<main
@@ -462,7 +566,11 @@ export function Reader({
 					setMenuOpen(false);
 					menuTrigger.current?.focus();
 				}}
-				preferences={preferences}
+				preferences={{
+					...preferences,
+					translation: route?.translation ?? preferences.translation,
+				}}
+				onTranslation={(value) => void switchTranslation(value)}
 				onPreferences={updatePreferences}
 				day={route?.day ?? currentLocalDay()}
 				plan={plan}

@@ -13,7 +13,7 @@ On 2026-09-26 the user added the standalone Playwright MCP to Codex CLI. It work
 
 Task 1.2's remaining page gate is also complete. OpenSpec progress is **16/53**; all 4.x tasks are complete. The user requested stopping here for context compaction. Resume with apply instructions and task 5.1 when authorized. All changes remain uncommitted; preserve them.
 
-See [chapter-api-cache.md](../../../docs/chapter-api-cache.md) for API/cache verification, native DynamoDB TTL, unit/integration/live checks, and current limitations. `.playwright-mcp/` is Git-ignored because automatic snapshots can contain provider text or tracking tokens.
+See [chapter-api-cache.md](../../../../docs/chapter-api-cache.md) for API/cache verification, native DynamoDB TTL, unit/integration/live checks, and current limitations. `.playwright-mcp/` is Git-ignored because automatic snapshots can contain provider text or tracking tokens.
 
 ## Historical in-app Browser failure
 

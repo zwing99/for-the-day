@@ -296,6 +296,7 @@ export function Reader({
 					onKeyDown={(event) => {
 						if (
 							menuOpen ||
+							document.getSelection()?.toString() ||
 							interactiveTarget(event.target) ||
 							event.altKey ||
 							event.ctrlKey ||

@@ -499,6 +499,7 @@ export function ReadingSurface({
 			data-active-verse={active}
 			onKeyDown={(event) => {
 				if (
+					document.getSelection()?.toString() ||
 					interactiveTarget(event.target) ||
 					event.altKey ||
 					event.ctrlKey ||

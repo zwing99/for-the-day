@@ -146,3 +146,37 @@ it("ignores passage shortcuts on controls and bounds passage ends", async () => 
 	fireEvent.keyDown(screen.getByRole("main"), { key: "ArrowRight" });
 	await screen.findByRole("heading", { name: "Psalm 37" });
 });
+
+it.each(["ArrowLeft", "ArrowRight"])(
+	"leaves %s to the browser while text is selected",
+	async (key) => {
+		window.history.replaceState(null, "", "/7/psalm/37/2?translation=CSB");
+		const source = { get: vi.fn(async (p: Passage) => chapterFor(p)) };
+		render(
+			<Reader
+				source={source}
+				storage={new ReadingStorage()}
+				report={vi.fn()}
+			/>,
+		);
+		const card = await screen.findByRole("article", { name: "Verse 2" });
+		card.focus();
+		const selection = document.getSelection()!;
+		const range = document.createRange();
+		range.selectNodeContents(card.querySelector("[data-semantic-text]")!);
+		selection.removeAllRanges();
+		selection.addRange(range);
+		try {
+			expect(selection.toString().length).toBeGreaterThan(0);
+			expect(fireEvent.keyDown(card, { key })).toBe(true);
+			await act(async () => {
+				await new Promise((resolve) => setTimeout(resolve, 220));
+			});
+			expect(window.location.pathname).toBe("/7/psalm/37/2");
+			expect(source.get).toHaveBeenCalledTimes(1);
+			expect(document.activeElement).toBe(card);
+		} finally {
+			selection.removeAllRanges();
+		}
+	},
+);

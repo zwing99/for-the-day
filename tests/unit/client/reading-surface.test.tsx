@@ -12,6 +12,33 @@ import { semanticFixture } from "../../fixtures/semantic-chapter.js";
 
 afterEach(cleanup);
 afterEach(() => vi.restoreAllMocks());
+it.each(["ArrowUp", "ArrowDown", "PageUp", "PageDown"])(
+	"leaves %s to the browser while text is selected",
+	(key) => {
+		const scroll = vi.fn();
+		HTMLElement.prototype.scrollIntoView = scroll;
+		const { container } = render(
+			<main>
+				<ReadingSurface chapter={semanticFixture()} />
+			</main>,
+		);
+		const card = container.querySelector("article")!;
+		card.focus();
+		const selection = document.getSelection()!;
+		const range = document.createRange();
+		range.selectNodeContents(card.querySelector("[data-semantic-text]")!);
+		selection.removeAllRanges();
+		selection.addRange(range);
+		try {
+			expect(selection.toString().length).toBeGreaterThan(0);
+			expect(fireEvent.keyDown(card, { key })).toBe(true);
+			expect(scroll).not.toHaveBeenCalled();
+			expect(document.activeElement).toBe(card);
+		} finally {
+			selection.removeAllRanges();
+		}
+	},
+);
 it.each(["b", "d"])(
 	"restores addressed verse %s to its containing page and immediately enables snapping",
 	(targetKey) => {

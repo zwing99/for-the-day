@@ -70,6 +70,14 @@ depends = ["typecheck", "lint", "format:check", "test"]
 description = "Run focused pure domain tests"
 run = "bun x --no-install vitest run tests/unit/domain"
 
+[tasks."test:client"]
+description = "Run Docker-independent reader component and client tests"
+run = "bun x --no-install vitest run tests/unit/client"
+
+[tasks."test:providers"]
+description = "Run mocked provider adapter tests without credentials or live requests"
+run = "bun x --no-install vitest run tests/unit/providers"
+
 [tasks."configure:envrc"]
 description = "Prompt for server provider credentials and create a private direnv file"
 run = "bash scripts/configure-envrc.sh"

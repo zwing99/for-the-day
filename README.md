@@ -44,19 +44,27 @@ Use `mise tasks` to discover the command surface. Package scripts do not duplica
 | `dev` | Prepare database and supervise Vite/Hono |
 | `dev:web`, `dev:api` | Run individual local processes |
 | `test` | Fast Docker-independent unit tests |
-| `test:domain` | Focused pure domain tests once present |
+| `test:domain` | Focused pure domain tests |
+| `test:client` | Reader component and client tests without services |
+| `test:providers` | Mocked adapter tests without credentials or live provider calls |
 | `typecheck` | Browser and Node-compatible server checks |
 | `lint`, `format:check`, `format` | Lint, check formatting, or format source |
 | `check` | Typechecking, lint, format checks, fast tests |
 | `build` | Build browser assets and Node-compatible API |
 | `preview` | Serve an existing production build on port 4173 with API proxy |
 | `db:start`, `db:init`, `db:stop` | Persistent local database lifecycle |
+| `test:integration` | Isolated cache tests; start DynamoDB Local first |
+| `smoke:csb` | Opt-in real-provider smoke test; requires credentials, saved samples, and dev |
+| `inspect:csb`, `verify:csb-samples` | Save ignored provider samples, then verify their fidelity offline |
+| `verify:verse-fit` | Opt-in full-corpus layout measurement; requires the local API and Chrome |
 
 Cache/API behavior and the latest verification checkpoint are in [docs/chapter-api-cache.md](docs/chapter-api-cache.md).
 
 Raw provider responses belong only in ignored `.local/provider-samples/`. Commit invented-text fixtures rather than copyrighted Scripture or credentials. Use `test:integration` for isolated DynamoDB checks and `smoke:csb` for opt-in live checks while dev runs; browser verification works through the standalone Playwright MCP.
 
 ## Verification record
+
+Block 1 command-surface verification: `mise tasks` lists the documented tasks; `mise run check` passed all 140 unit/component tests and type/lint/format checks, and `mise run build` passed. Starting `mise run dev` initialized the existing local table and served a healthy `/api/health` response through Vite. Ctrl-C released both ports 5173 and 8787, as verified with `lsof`; DynamoDB remained available as intended.
 
 The pinned tools install, frozen dependency installation, typechecks, health unit test, formatting/lint, production build, Node 24 API execution, and Vite health proxy have passed. DynamoDB Local start/init/repeated-init/stop and fresh temporary-table creation through the AWS CLI container have passed. The temporary table was removed afterward. The standalone Playwright MCP has verified the CSB milestone on phone/tablet layouts, exact text/attribution, and cached-token FUMS reporting. The earlier in-app Browser plugin failure remains separate; future interaction/PWA gates are still pending.
 

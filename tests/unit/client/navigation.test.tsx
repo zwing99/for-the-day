@@ -107,6 +107,69 @@ it("restores explicit URL before saved position, then saved before intro, and ha
 	});
 	await screen.findByRole("button", { name: "Begin reading" });
 });
+
+it("starts a new local date fresh and resumes only its own progress", async () => {
+	const storage = new ReadingStorage();
+	storage.saveDatePosition("2026-09-07", {
+		...chapterRoute(7, 37),
+		location: "2",
+	});
+	vi.useFakeTimers({ shouldAdvanceTime: true });
+	vi.setSystemTime(new Date(2026, 9, 7, 12));
+	window.history.replaceState(null, "", "/");
+	const source = { get: vi.fn(async (p: Passage) => chapterFor(p)) };
+	try {
+		const view = render(
+			<Reader source={source} storage={storage} report={vi.fn()} />,
+		);
+		await screen.findByRole("heading", { name: "Psalm 7" });
+		expect(screen.getByRole("button", { name: "Begin reading" })).toBeTruthy();
+		expect(storage.lastFollowingDate()).toBe("2026-10-07");
+		view.unmount();
+		storage.saveDatePosition("2026-10-07", {
+			...chapterRoute(7, 37),
+			location: "2",
+		});
+		window.history.replaceState(null, "", "/");
+		render(<Reader source={source} storage={storage} report={vi.fn()} />);
+		await screen.findByRole("heading", { name: "Psalm 37" });
+	} finally {
+		vi.useRealTimers();
+	}
+});
+
+it("keeps visible reading at midnight, then follows the new day on foreground return", async () => {
+	vi.useFakeTimers({ shouldAdvanceTime: true });
+	vi.setSystemTime(new Date(2026, 8, 7, 23, 59));
+	window.history.replaceState(null, "", "/");
+	const visibility = vi.spyOn(document, "visibilityState", "get");
+	visibility.mockReturnValue("visible");
+	try {
+		render(
+			<Reader
+				source={{ get: async (p: Passage) => chapterFor(p) }}
+				storage={new ReadingStorage()}
+				report={vi.fn()}
+			/>,
+		);
+		await screen.findByRole("heading", { name: "Psalm 7" });
+		vi.setSystemTime(new Date(2026, 8, 8, 0, 1));
+		expect(screen.getByRole("heading", { name: "Psalm 7" })).toBeTruthy();
+		visibility.mockReturnValue("hidden");
+		act(() => document.dispatchEvent(new Event("visibilitychange")));
+		visibility.mockReturnValue("visible");
+		act(() => document.dispatchEvent(new Event("visibilitychange")));
+		await screen.findByRole("heading", { name: "Psalm 8" });
+		expect(window.location.pathname).toBe("/8/psalm/8");
+	} finally {
+		visibility.mockRestore();
+		vi.useRealTimers();
+	}
+});
+
+function chapterRoute(day: number, chapter: number) {
+	return { day, book: "PSA" as const, chapter, translation: "CSB" as const };
+}
 it("cancels obsolete requests and refuses late responses after passage changes", async () => {
 	let resolveOld:
 		| ((value: ReturnType<typeof semanticFixture>) => void)

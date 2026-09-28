@@ -138,3 +138,50 @@
 		border-radius: 0.5rem;
 	}
 }
+.install-invitation {
+	box-sizing: border-box;
+	padding: 0.4rem max(1rem, env(safe-area-inset-left)) 0.5rem;
+	background: var(--reader-background);
+	color: var(--reader-text);
+	font:
+		0.78rem / 1.35 system-ui,
+		sans-serif;
+	text-align: center;
+	border-block: 1px solid var(--reader-border);
+}
+.install-actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 0.2rem 0.6rem;
+}
+.install-actions button {
+	font: inherit;
+	min-height: 32px;
+	padding: 0.2rem 0.4rem;
+}
+.install-help::backdrop {
+	background: rgb(0 0 0 / 0.4);
+}
+.install-help {
+	box-sizing: border-box;
+	width: min(100%, 24rem);
+	max-width: calc(100% - 2rem);
+	padding: 1.25rem;
+	max-height: 80dvh;
+	overflow: auto;
+	border: 1px solid var(--reader-border);
+	border-radius: 0.5rem;
+	background: var(--reader-background);
+	color: var(--reader-text);
+	font:
+		1rem / 1.5 system-ui,
+		sans-serif;
+}
+.install-help h2 {
+	font-size: 1.2rem;
+}
+.install-help button {
+	min-width: 44px;
+	min-height: 44px;
+}

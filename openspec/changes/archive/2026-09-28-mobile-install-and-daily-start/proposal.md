@@ -6,7 +6,7 @@ The reader has an installable application shell, but mobile readers have no clea
 
 ## What Changes
 
-- Offer an accessible mobile install invitation on the screen opened in a browser, with platform-specific installation guidance, a one-week reminder delay, and a permanent opt-out that can be changed in Settings.
+- Offer an accessible mobile install invitation on the screen opened in a browser, including on the private-network HTTP address printed by `mise run host`. Provide platform-specific installation guidance, a one-week reminder delay, a permanent opt-out that can be changed in Settings, and an honest explanation when an insecure local address cannot install the offline-capable PWA.
 - On a new local calendar date, start the day's plan from its beginning on a fresh root/app launch or when a day-following app returns to the foreground; preserve an uninterrupted reading session and explicitly selected or linked passages.
 - Keep prior reading locations available for deliberate navigation without letting a previous month's same-numbered day resume today's fresh start.
 

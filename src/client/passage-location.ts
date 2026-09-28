@@ -8,8 +8,11 @@ export function passageLocation(
 	chapter: SemanticChapter,
 	preferences: Preferences,
 	storage: ReadingStorage,
+	date?: string,
 ): ReaderRoute {
-	const saved = storage.position(route);
+	const saved = date
+		? storage.datePosition(date, route)
+		: storage.position(route);
 	let location = route.location
 		? route
 		: saved?.translation === route.translation

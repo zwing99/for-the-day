@@ -20,7 +20,10 @@ for (const [name, engine] of [
 	const browser = await engine.launch();
 	let checkpoint = "startup";
 	try {
-		const context = await browser.newContext({ reducedMotion: "reduce" });
+		const context = await browser.newContext({
+			reducedMotion: "reduce",
+			serviceWorkers: "block",
+		});
 		await context.addInitScript(
 			"localStorage.setItem('for-the-day:v1:preferences', JSON.stringify({translation:'CSB',density:'Spacious',fontSize:'normal',appearance:'light',intros:true,verseLabels:true}))",
 		);

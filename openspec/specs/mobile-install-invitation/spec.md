@@ -1,13 +1,13 @@
-# Spec Delta
+# mobile-install-invitation Specification
 
 ## Purpose
 
 Help mobile readers install the existing web app through a quiet, accessible invitation with instructions suited to their device and durable control over reminders.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Mobile install invitation
-On an eligible mobile browser visit, the reader SHALL show a compact install invitation on the screen the reader opens. It SHALL offer Install app, Remind me in a week, and Never ask again without covering Scripture or preventing reading. It SHALL not appear in an installed standalone app or where the app cannot offer a working installation path. It SHALL remain available as an Install app action in the reader menu when relevant, including after an invitation is dismissed.
+On an eligible mobile browser visit, the reader SHALL show a compact install invitation on the screen the reader opens. It SHALL offer Install app, Remind me in a week, and Never ask again without covering Scripture or preventing reading. It SHALL not appear in an installed standalone app or on a public insecure origin. On a private-network HTTP development address, including the address printed by `mise run host`, it SHALL show the invitation and explain any platform installation limit. It SHALL remain available as an Install app action in the reader menu when relevant, including after an invitation is dismissed.
 
 #### Scenario: First eligible mobile visit
 - **WHEN** an uninstalled reader opens the app in a supported iPhone or Android browser without a dismissal preference
@@ -20,6 +20,10 @@ On an eligible mobile browser visit, the reader SHALL show a compact install inv
 #### Scenario: Unsupported installation context
 - **WHEN** the page cannot offer a working installation path
 - **THEN** the reader does not show an automatic install invitation
+
+#### Scenario: Private-network development address
+- **WHEN** an uninstalled mobile reader opens the app from a private-network HTTP development address
+- **THEN** the invitation is visible and the Install app action explains that offline PWA installation needs a secure origin
 
 ### Requirement: Reminder choices
 The reader SHALL show the invitation on each eligible visit until installation, a seven-day reminder delay, or a permanent opt-out suppresses it. Remind me in a week SHALL suppress it for seven elapsed days; Never ask again SHALL suppress future automatic invitations on that browser. Settings SHALL expose the permanent choice and allow the reader to turn automatic invitations back on. Dismissal state SHALL contain no Scripture or provider content.
@@ -46,3 +50,7 @@ The Install app action SHALL open the browser's native installation prompt when 
 #### Scenario: Native prompt unavailable
 - **WHEN** an Android browser does not offer an in-page install prompt but provides a menu installation path
 - **THEN** Install app shows manual menu instructions
+
+#### Scenario: Android local HTTP development address
+- **WHEN** an Android reader opens the private-network HTTP address printed by `mise run host`
+- **THEN** Install app explains that the offline-capable PWA cannot be installed from that insecure address and the reader remains usable there

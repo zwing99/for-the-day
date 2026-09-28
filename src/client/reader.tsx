@@ -21,6 +21,10 @@ import {
 } from "./chapter-source.js";
 import { reportChapterDisplay } from "./fums.js";
 import {
+	InstallInvitation,
+	useInstallInvitation,
+} from "./install-invitation.js";
+import {
 	interactiveTarget,
 	type PassageDrag,
 	usePassageGesture,
@@ -29,6 +33,7 @@ import { ReaderMenu } from "./reader-menu.js";
 import { passageLocation } from "./passage-location.js";
 import {
 	browserReadingStorage,
+	localCalendarKey,
 	type Preferences,
 	type ReadingStorage,
 } from "./reading-storage.js";
@@ -94,7 +99,9 @@ export function Reader({
 	useBrowserAppearance(preferences.appearance);
 	const preferencesRef = useRef(preferences);
 	preferencesRef.current = preferences;
+	const following = useRef<string | undefined>(undefined);
 	const [menuOpen, setMenuOpen] = useState(false);
+	const install = useInstallInvitation();
 	const [drag, setDrag] = useState<PassageDrag>({ phase: "idle", offset: 0 });
 	const [handoff, setHandoff] = useState<{
 		route: ReaderRoute;
@@ -111,11 +118,33 @@ export function Reader({
 	}
 	function readRoute() {
 		try {
+			repository.lastFollowingDate();
 			const url = new URL(window.location.href);
+			const root = url.pathname === "/";
+			const follows = root || window.history.state?.dayFollowing === true;
+			const date = follows ? localCalendarKey() : undefined;
+			following.current = date;
 			let route = parseReaderRoute(url, preferencesRef.current.translation);
 			if (url.pathname === "/" || /^\/\d+$/.test(url.pathname)) {
-				const hint = repository.activePassage(route.day);
+				const hint = date
+					? repository.lastFollowingDate() === date
+						? repository.dateActivePassage(date)
+						: undefined
+					: repository.activePassage(route.day);
 				if (hint) route = { ...route, book: hint.book, chapter: hint.chapter };
+			}
+			if (date) {
+				if (!root && repository.lastFollowingDate() !== date) {
+					const first = readingPlan(Number(date.slice(-2)))[0]!;
+					route = {
+						...route,
+						day: Number(date.slice(-2)),
+						...first,
+						location: undefined,
+						orgIds: undefined,
+					};
+				}
+				repository.setFollowingDate(date);
 			}
 			return { route, id: ++activationSequence };
 		} catch (error) {
@@ -162,7 +191,11 @@ export function Reader({
 	const [retryReady, setRetryReady] = useState(true);
 	const current = useRef<ReaderRoute | undefined>(undefined);
 	function flush() {
-		if (current.current) repository.savePosition(current.current);
+		if (current.current) {
+			repository.savePosition(current.current);
+			if (following.current)
+				repository.saveDatePosition(following.current, current.current);
+		}
 	}
 	function navigate(
 		next: ReaderRoute,
@@ -200,7 +233,7 @@ export function Reader({
 				activation: `chapter-${++activationSequence}`,
 			});
 		window.history[replace ? "replaceState" : "pushState"](
-			null,
+			following.current ? { dayFollowing: true } : null,
 			"",
 			readerPath(next),
 		);
@@ -224,6 +257,21 @@ export function Reader({
 		};
 		const hidden = () => {
 			if (document.visibilityState === "hidden") flush();
+			else if (document.visibilityState === "visible" && following.current) {
+				const date = localCalendarKey();
+				if (date !== following.current) {
+					flush();
+					current.current = undefined;
+					following.current = date;
+					repository.setFollowingDate(date);
+					const first = readingPlan(Number(date.slice(-2)))[0]!;
+					navigate({
+						day: Number(date.slice(-2)),
+						...first,
+						translation: preferencesRef.current.translation,
+					});
+				}
+			}
 		};
 		window.addEventListener("popstate", pop);
 		window.addEventListener("pagehide", flush);
@@ -350,7 +398,13 @@ export function Reader({
 	let routeError = navigation.error;
 	if (route && chapter) {
 		try {
-			location = passageLocation(route, chapter, preferences, repository);
+			location = passageLocation(
+				route,
+				chapter,
+				preferences,
+				repository,
+				following.current,
+			);
 		} catch (failure) {
 			routeError = failure as RouteError;
 		}
@@ -380,7 +434,12 @@ export function Reader({
 		setVisibleLocation(next.location);
 		current.current = next;
 		repository.savePosition(next);
-		window.history.replaceState(null, "", readerPath(next));
+		if (following.current) repository.saveDatePosition(following.current, next);
+		window.history.replaceState(
+			following.current ? { dayFollowing: true } : null,
+			"",
+			readerPath(next),
+		);
 	}
 	const plan = route ? readingPlan(route.day) : [];
 	const index = plan.findIndex(
@@ -469,6 +528,7 @@ export function Reader({
 				previewChapter,
 				preferences,
 				repository,
+				following.current,
 			);
 		} catch {
 			/* An invalid saved anchor leaves the preview unavailable. */
@@ -487,10 +547,30 @@ export function Reader({
 			});
 	}
 	function selectDay(day: number) {
+		flush();
+		following.current = undefined;
 		const next = readingPlan(day)[0]!;
 		navigate({
 			day,
 			...next,
+			translation: route?.translation ?? preferences.translation,
+		});
+	}
+	function selectToday() {
+		flush();
+		current.current = undefined;
+		const date = localCalendarKey();
+		following.current = date;
+		const day = Number(date.slice(-2));
+		const first = readingPlan(day)[0]!;
+		const hint =
+			repository.lastFollowingDate() === date
+				? repository.dateActivePassage(date)
+				: undefined;
+		repository.setFollowingDate(date);
+		navigate({
+			day,
+			...(hint ?? first),
 			translation: route?.translation ?? preferences.translation,
 		});
 	}
@@ -499,6 +579,9 @@ export function Reader({
 		flush();
 		for (const p of day ? plan : [route])
 			repository.resetPosition({ ...route, ...p });
+		if (following.current)
+			for (const p of day ? plan : [route])
+				repository.resetDatePosition(following.current, { ...route, ...p });
 		current.current = undefined;
 		const passage = day ? plan[0]! : route;
 		navigate({
@@ -559,6 +642,7 @@ export function Reader({
 					</div>
 				)}
 			</header>
+			<InstallInvitation install={install} />
 			<div
 				ref={stage}
 				className="passage-stage"
@@ -770,6 +854,7 @@ export function Reader({
 				))}
 			</nav>
 			<ReaderMenu
+				install={install}
 				open={menuOpen}
 				onClose={() => {
 					setMenuOpen(false);
@@ -786,6 +871,7 @@ export function Reader({
 				index={index}
 				onPassage={selectPassage}
 				onDay={selectDay}
+				onToday={selectToday}
 				onRestart={restart}
 				onCard={(direction) => actions.current?.move(direction)}
 				chapter={chapter}

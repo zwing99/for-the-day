@@ -6,6 +6,9 @@
 	display: grid;
 	grid-template-rows: auto minmax(0, 1fr) auto;
 }
+.reader-shell:has(.install-invitation) {
+	grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
 /* iOS Home Screen mode can report dvh as the small viewport even without
    browser chrome. vh expands the standalone web layer to the full screen. */
 @supports (-webkit-touch-callout: none) {

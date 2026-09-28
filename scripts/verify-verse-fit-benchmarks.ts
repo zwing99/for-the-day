@@ -34,7 +34,10 @@ for (const [name, engine] of [
 ] as const) {
 	const browser = await engine.launch();
 	try {
-		const context = await browser.newContext({ reducedMotion: "reduce" });
+		const context = await browser.newContext({
+			reducedMotion: "reduce",
+			serviceWorkers: "block",
+		});
 		await context.route("**/*", async (route) => {
 			const url = new URL(route.request().url());
 			if (url.origin !== origin) return route.abort();
@@ -106,6 +109,87 @@ for (const [name, engine] of [
 			console.log(`${name} ${width}×${height}: cached benchmark matrix passed`);
 			await writeFile(report, JSON.stringify(records, null, 2));
 		}
+		const mobile = await browser.newContext({
+			userAgent:
+				"Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+			isMobile: true,
+			hasTouch: true,
+			reducedMotion: "reduce",
+			serviceWorkers: "block",
+		});
+		await mobile.route("**/*", async (route) => {
+			const url = new URL(route.request().url());
+			if (url.origin !== origin) return route.abort();
+			if (!url.pathname.startsWith("/api/")) return route.continue();
+			const [, , , , book, number] = url.pathname.split("/");
+			const chapter = chapters.find(
+				(item) =>
+					item.identity.book === book &&
+					item.identity.chapter === Number(number),
+			);
+			if (!chapter) return route.abort();
+			return route.fulfill({
+				json: { chapter: { ...chapter, tracking: { kind: "none" } } },
+			});
+		});
+		const mobilePage = await mobile.newPage();
+		await mobilePage.goto(origin);
+		await mobilePage.locator(".install-invitation").waitFor();
+		for (const [width, height] of [
+			[320, 568],
+			[390, 844],
+			[844, 390],
+		] as const) {
+			await mobilePage.setViewportSize({ width, height });
+			for (const density of ["Spacious", "Balanced", "Compact"]) {
+				for (const fontSize of ["normal", "large", "larger"]) {
+					for (const rootSize of [16, 20]) {
+						await mobilePage.evaluate(
+							(preferences) =>
+								localStorage.setItem(
+									"for-the-day:v1:preferences",
+									JSON.stringify(preferences),
+								),
+							{
+								translation: "CSB",
+								density,
+								fontSize,
+								appearance: "light",
+								intros: true,
+								verseLabels: true,
+							},
+						);
+						for (const passage of benchmarks) {
+							await mobilePage.goto(
+								`${origin}/${passage.book === "PRO" ? passage.chapter : ((passage.chapter - 1) % 30) + 1}/${passage.book === "PSA" ? "psalm" : "proverbs"}/${passage.chapter}/${passage.verse}?translation=CSB`,
+							);
+							await mobilePage.evaluate((size) => {
+								document.documentElement.style.fontSize = `${size}px`;
+							}, rootSize);
+							await mobilePage.locator(".install-invitation").waitFor();
+							await settledReader(mobilePage);
+							const geometry = await assertReaderGeometry(mobilePage);
+							records.push({
+								engine: name,
+								platform: "iPhone invite visible",
+								width,
+								height,
+								density,
+								fontSize,
+								rootSize,
+								reference: `${passage.book}.${passage.chapter}.${passage.verse}`,
+								geometry,
+							});
+						}
+					}
+				}
+			}
+			console.log(
+				`${name} iPhone invitation ${width}×${height}: cached benchmark matrix passed`,
+			);
+			await writeFile(report, JSON.stringify(records, null, 2));
+		}
+		await mobile.close();
 	} finally {
 		await browser.close();
 	}

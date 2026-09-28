@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { currentLocalDay, type Passage } from "../domain/reading-plan.js";
 import type { SemanticChapter } from "../domain/semantic-chapter.js";
+import type { InstallController } from "./install-invitation.js";
 import { PwaUpdateNotice } from "./pwa-update-notice.js";
 import type { Preferences } from "./reading-storage.js";
 import { Attribution } from "./semantic-renderer.js";
@@ -17,6 +18,8 @@ export function ReaderMenu({
 	index,
 	onPassage,
 	onDay,
+	onToday,
+	install,
 	onRestart,
 	onCard,
 	chapter,
@@ -32,6 +35,8 @@ export function ReaderMenu({
 	index: number;
 	onPassage(index: number): void;
 	onDay(day: number): void;
+	onToday?(): void;
+	install?: InstallController;
 	onRestart(day: boolean): void;
 	onCard(direction: number): void;
 	chapter?: SemanticChapter;
@@ -146,7 +151,9 @@ export function ReaderMenu({
 							</select>
 						</label>
 						<div className="menu-actions">
-							<button onClick={() => act(() => onDay(currentLocalDay()))}>
+							<button
+								onClick={() => act(onToday ?? (() => onDay(currentLocalDay())))}
+							>
 								Today
 							</button>
 							<button
@@ -265,6 +272,22 @@ export function ReaderMenu({
 							Verse numbers
 						</label>
 					</section>
+					{install?.platform && (
+						<section aria-labelledby="install-settings-title">
+							<h3 id="install-settings-title">Install app</h3>
+							<button onClick={() => act(install.install)}>Install app</button>
+							<label className="check-field">
+								<input
+									type="checkbox"
+									checked={install.neverAsk}
+									onChange={(event) =>
+										install.setNeverAsk(event.target.checked)
+									}
+								/>
+								Never ask again
+							</label>
+						</section>
+					)}
 					{getLink && <ShareLink getLink={getLink} />}
 					<PwaUpdateNotice />
 					{chapter && <Attribution chapter={chapter} />}

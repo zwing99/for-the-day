@@ -1,5 +1,21 @@
 # Installable application shell
 
+## Add to your Home Screen
+
+On a supported mobile browser visit, the reader offers a small invitation above the reading page. Reading remains available. Choose **Install app** to open Android's installation prompt when the browser provides one. Otherwise, use the browser menu and choose **Install app** or **Add to Home Screen**, then confirm. On iPhone in Safari, open **Share** or **Page Menu**, choose **Add to Home Screen**, leave **Open as Web App** enabled when offered, then tap **Add**. Browser menu labels vary by version. These steps follow [Apple's iPhone guide](https://support.apple.com/guide/iphone/open-as-web-app-iphea86e5236/ios) and [Chrome's Android guide](https://support.google.com/chrome/answer/9658361/use-progressive-web-apps-android?co=GENIE.Platform%3DAndroid&hl=en-GB).
+
+**Remind me in a week** hides the invitation for seven elapsed days. **Never ask again** hides future automatic invitations until you turn that choice off in reader Settings. The reader menu keeps an **Install app** action on supported mobile browsers, including when opened from the private-network HTTP address printed by `mise run host`. That address is for phone interaction testing; the app shell and Android PWA installation require HTTPS or localhost/loopback. From the LAN address, Install app explains this limit and reading remains usable. Opening instructions does not mean installation succeeded. The invitation is absent in standalone Home Screen mode.
+
+### LAN host behavior
+
+On a phone, `mise run host` serves a private IPv4 HTTP origin (such as `http://10.x.x.x`). Supported mobile browsers show the invitation and menu action there so the install steps can be tested. The phone and development computer must share a network. HTTP on a LAN address does not provide the secure context needed for the offline app shell. Android explains that HTTPS is needed; iPhone explains that the Home Screen icon opens this local address and the phone must stay on the same network. `localhost` and loopback remain trustworthy for the device that runs the browser; a phone's own `localhost` refers to the phone, not the development computer. Public insecure HTTP origins and desktop browsers do not show the mobile invitation.
+
+### Mobile install and daily-start verification — 2026-09-28
+
+The production build passed LAN-host interaction checks at `http://10.13.0.172:4174` in mobile iPhone WebKit and Android Chromium. Both platforms showed the install invitation above, without overlap with, the reader; portrait/landscape layout, help, menu action, keyboard close, touch scrolling, larger root text, same-date return, next-month reset for a repeated day number, and standalone invitation suppression passed. Android help stated that installation from this private HTTP address requires HTTPS. A separate Playwright accessibility snapshot confirmed the built desktop reader has no mobile invitation. The physical iPhone Mirror was connected to an existing standalone session; the invite is intentionally hidden in that mode.
+
+The cached CSB one-screen regression passed 1,800 cases in Chromium and WebKit with the invitation visible for mobile geometry: five benchmark references, all three densities, normal/large/larger preferences, 16px/20px root sizes, and 320×568, 390×844 and 844×390. At default preference, all tested verse pages fit without local shrinking; minimum measured reader surfaces were 423.6px, 673.7px and 280.8px respectively. No upstream requests were made. `mise run check` passed 291 unit/component tests and both typechecks, lint and formatting; `mise run build` passed. Storage regressions verify the rolling 90-date bound.
+
 ## iPhone Mirroring viewport trial — 2026-09-28
 
 The iPhone 17 Pro was running the reader from `mise run host` in Home Screen standalone mode, so Vite edits appeared live. In portrait dark mode, the original intro had a 62 CSS pixel band below the footer, and the small “For the day” brand looked blurred against the status treatment. A temporary local probe was shown on the phone and then removed. Its user agent contained `iPhone OS 18_7` and `Version/27.0`; that string is not a reliable OS-version measurement, so the installed iOS version remains unconfirmed.

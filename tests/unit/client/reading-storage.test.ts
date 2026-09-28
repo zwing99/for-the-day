@@ -1,6 +1,10 @@
-import { expect, it } from "vitest";
-import { ReadingStorage } from "../../../src/client/reading-storage.js";
+import { expect, it, vi } from "vitest";
+import {
+	localCalendarKey,
+	ReadingStorage,
+} from "../../../src/client/reading-storage.js";
 import { parseReaderRoute } from "../../../src/domain/reader-route.js";
+import { readingPlan } from "../../../src/domain/reading-plan.js";
 
 const route = (chapter: number, location: string) =>
 	parseReaderRoute(
@@ -111,4 +115,82 @@ it("restores WEBU preferences and shared verse routes across reloads while keepi
 	const reloaded = new ReadingStorage(port);
 	expect(reloaded.preferences().translation).toBe("WEBU");
 	expect(reloaded.position(shared)).toEqual(shared);
+});
+
+it("uses device-local calendar keys and isolates the same plan day across months", () => {
+	vi.useFakeTimers();
+	vi.setSystemTime(new Date(2026, 9, 7, 12));
+	const records = new Map<string, string>();
+	const port = {
+		getItem: (key: string) => records.get(key) ?? null,
+		setItem: (key: string, value: string) => {
+			records.set(key, value);
+		},
+	};
+	const september = new ReadingStorage(port);
+	september.saveDatePosition("2026-09-07", route(37, "3"));
+	expect(
+		new ReadingStorage(port).datePosition("2026-09-07", route(37, "intro"))
+			?.location,
+	).toBe("3");
+	expect(
+		new ReadingStorage(port).dateActivePassage("2026-09-07")?.chapter,
+	).toBe(37);
+	expect(
+		new ReadingStorage(port).datePosition("2026-10-07", route(37, "intro")),
+	).toBeUndefined();
+	expect(
+		new ReadingStorage(port).dateActivePassage("2026-10-07"),
+	).toBeUndefined();
+	expect(september.position(route(37, "intro"))?.location).toBeUndefined();
+	expect(localCalendarKey(new Date(2026, 8, 7, 23, 30))).toBe("2026-09-07");
+	vi.useRealTimers();
+});
+
+it("rejects malformed dates and routes, and keeps date progress in memory when storage fails", () => {
+	vi.useFakeTimers();
+	vi.setSystemTime(new Date(2026, 9, 7, 12));
+	const store = new ReadingStorage({
+		getItem: () => "{",
+		setItem() {
+			throw Error();
+		},
+	});
+	expect(store.lastFollowingDate()).toBeUndefined();
+	store.saveDatePosition("2026-02-31", route(7, "2"));
+	expect(store.dateActivePassage("2026-02-31")).toBeUndefined();
+	store.saveDatePosition("2026-10-07", route(7, "2"));
+	expect(store.datePosition("2026-10-07", route(7, "intro"))?.location).toBe(
+		"2",
+	);
+	expect(store.lastFollowingDate()).toBe("2026-10-07");
+	vi.useRealTimers();
+});
+
+it("bounds date-scoped storage to 90 dates", () => {
+	vi.useFakeTimers();
+	vi.setSystemTime(new Date(2025, 3, 4, 12));
+	const records = new Map<string, string>();
+	const store = new ReadingStorage({
+		getItem: (key) => records.get(key) ?? null,
+		setItem: (key, value) => {
+			records.set(key, value);
+		},
+	});
+	for (let offset = 0; offset < 94; offset++) {
+		const date = new Date(2025, 0, 1 + offset);
+		const key = localCalendarKey(date);
+		const day = date.getDate();
+		store.saveDatePosition(key, {
+			day,
+			...readingPlan(day)[0]!,
+			translation: "CSB",
+			location: "2",
+		});
+	}
+	const progress = JSON.parse(records.get("for-the-day:v1:date-progress")!);
+	expect(Object.keys(progress)).toHaveLength(90);
+	expect(progress["2025-01-01"]).toBeUndefined();
+	expect(progress["2025-04-04"]).toBeDefined();
+	vi.useRealTimers();
 });

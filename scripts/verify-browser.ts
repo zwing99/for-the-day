@@ -109,6 +109,140 @@ for (const [name, engine] of [
 				);
 			}
 		}
+		if (name === "Chromium") {
+			checkpoint = "saved-page preview typography";
+			await page.emulateMedia({ reducedMotion: "no-preference" });
+			await page.setViewportSize({ width: 320, height: 568 });
+			await page.goto(`${origin}/23/psalm/23/2?translation=WEBU`);
+			await page.locator("[data-active-verse='PSA.23.2']").waitFor();
+			await page.evaluate(() => {
+				localStorage.setItem(
+					"for-the-day:v1:position:23:PSA:53",
+					JSON.stringify("/23/psalm/53/3?translation=WEBU"),
+				);
+				const main = document.querySelector("main.reading-scroll")!;
+				const touch = (x: number) =>
+					new Touch({ identifier: 1, target: main, clientX: x, clientY: 200 });
+				main.dispatchEvent(
+					new TouchEvent("touchstart", {
+						bubbles: true,
+						touches: [touch(300)],
+						changedTouches: [touch(300)],
+					}),
+				);
+				main.dispatchEvent(
+					new TouchEvent("touchmove", {
+						bubbles: true,
+						touches: [touch(180)],
+						changedTouches: [touch(180)],
+					}),
+				);
+			});
+			await page.waitForFunction(
+				() =>
+					document.querySelector<HTMLElement>(".passage-preview-content")?.style
+						.visibility === "visible",
+			);
+			const preview = await page.evaluate(() => {
+				const surface =
+					document.querySelector<HTMLElement>(".passage-preview")!;
+				const marker = [
+					...surface.querySelectorAll<HTMLElement>("[data-location-key]"),
+				].find((node) => node.dataset.locationKey === "PSA.53.3")!;
+				const card = marker.closest<HTMLElement>(".verse-card")!;
+				return {
+					font: getComputedStyle(card).fontSize,
+					readingHeight: surface.style.getPropertyValue("--reading-height"),
+					fontStatus: document.fonts.status,
+					text: [...card.querySelectorAll("[data-semantic-text]")]
+						.map((node) => node.textContent)
+						.join(""),
+					width: card.clientWidth,
+					active: surface
+						.querySelector("[data-active-verse]")
+						?.getAttribute("data-active-verse"),
+				};
+			});
+			strictEqual(preview.active, "PSA.53.3");
+			if (preview.width <= 0)
+				throw new Error("Ready preview has no measured width.");
+			const handoffFrames = await page.evaluate(async () => {
+				const main = document.querySelector(
+					"main.reading-scroll:not(.passage-preview)",
+				)!;
+				const touch = new Touch({
+					identifier: 1,
+					target: main,
+					clientX: 180,
+					clientY: 200,
+				});
+				main.dispatchEvent(
+					new TouchEvent("touchend", {
+						bubbles: true,
+						touches: [],
+						changedTouches: [touch],
+					}),
+				);
+				const frames: { handoff: boolean; visibleVerse: string | null }[] = [];
+				for (let index = 0; index < 90; index++) {
+					await new Promise(requestAnimationFrame);
+					const stage = document.querySelector<HTMLElement>(".passage-stage")!;
+					const handoff = stage.dataset.handoff === "ready";
+					const surface = stage.querySelector<HTMLElement>(
+						handoff
+							? ".passage-preview"
+							: "main.reading-scroll:not(.passage-preview)",
+					);
+					frames.push({
+						handoff,
+						visibleVerse:
+							surface
+								?.querySelector("[data-active-verse]")
+								?.getAttribute("data-active-verse") ?? null,
+					});
+					if (frames.some((frame) => frame.handoff) && !handoff) break;
+				}
+				return frames;
+			});
+			if (!handoffFrames.some((frame) => frame.handoff))
+				throw new Error("Committed swipe skipped its prepared-page handoff.");
+			if (
+				handoffFrames.some(
+					(frame) => frame.handoff && frame.visibleVerse !== "PSA.53.3",
+				)
+			)
+				throw new Error(
+					`Prepared page changed during handoff: ${JSON.stringify(handoffFrames)}`,
+				);
+			await page.waitForURL("**/23/psalm/53/**");
+			await settledReader(page);
+			const committed = await page.evaluate(() => {
+				const surface = document.querySelector<HTMLElement>(
+					"main.reading-scroll:not(.passage-preview)",
+				)!;
+				const marker = [
+					...surface.querySelectorAll<HTMLElement>("[data-location-key]"),
+				].find((node) => node.dataset.locationKey === "PSA.53.3")!;
+				const card = marker.closest<HTMLElement>(".verse-card")!;
+				return {
+					font: getComputedStyle(card).fontSize,
+					readingHeight: surface.style.getPropertyValue("--reading-height"),
+					fontStatus: document.fonts.status,
+					text: [...card.querySelectorAll("[data-semantic-text]")]
+						.map((node) => node.textContent)
+						.join(""),
+					width: card.clientWidth,
+				};
+			});
+			strictEqual(
+				preview.font,
+				committed.font,
+				JSON.stringify({ preview, committed }),
+			);
+			strictEqual(preview.text, committed.text);
+			strictEqual(preview.width, committed.width);
+			await page.emulateMedia({ reducedMotion: "reduce" });
+		}
 		failing = true;
 		checkpoint = "failure recovery";
 		await page.goto(`${origin}/23/psalm/23/2?translation=CSB`);

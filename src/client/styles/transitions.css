@@ -10,15 +10,39 @@
 	background: var(--reader-background);
 }
 
+.passage-stage[data-handoff="ready"] > .reading-scroll:first-child {
+	visibility: hidden;
+}
+
 .passage-preview {
 	position: absolute;
 	inset: 0;
-	display: grid;
-	place-items: center;
-	padding: 1.5rem;
+	display: block;
+	padding: 0;
 	background: var(--reader-background);
-	border-inline: 1px solid var(--reader-border);
+	box-shadow:
+		inset 1px 0 var(--reader-border),
+		inset -1px 0 var(--reader-border);
 	text-align: center;
+	overflow-y: auto;
+	scroll-snap-type: y mandatory;
+}
+
+.passage-preview-content {
+	width: 100%;
+	text-align: start;
+}
+
+.passage-preview-placeholder {
+	position: absolute;
+	inset: 0;
+	display: grid;
+	place-content: center;
+	padding: 1.5rem;
+}
+
+.passage-preview-placeholder[hidden] {
+	display: none;
 }
 
 .passage-stage[data-transition="settling"] > .reading-scroll,

@@ -15,6 +15,8 @@ export class ChapterLoadError extends Error {
 	}
 }
 export interface ChapterSource {
+	/** Shared retention and compatible request joining are available for warming. */
+	readonly cacheAware?: true;
 	get(
 		passage: Passage,
 		signal: AbortSignal,

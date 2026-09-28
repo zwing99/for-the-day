@@ -132,7 +132,11 @@ it("uses the same cache for menu switching and subsequent route loads", async ()
 			);
 			expect(window.location.pathname).toBe("/23/psalm/23/2");
 		}
-		expect(get).toHaveBeenCalledTimes(2);
+		expect(
+			get.mock.calls
+				.filter(([p]) => p.chapter === 23)
+				.map(([, , context]) => context.translation),
+		).toEqual(["CSB", "NIV"]);
 	} finally {
 		repository.dispose();
 	}

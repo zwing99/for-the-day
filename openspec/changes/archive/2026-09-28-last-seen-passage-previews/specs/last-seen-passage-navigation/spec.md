@@ -21,12 +21,16 @@ Leftward and rightward passage navigation SHALL return to the destination's inde
 - **WHEN** the destination has no saved reference compatible with the selected translation
 - **THEN** its preview and committed presentation use the configured introduction or first-verse default without applying another translation's identity
 
-### Requirement: Daily preparation is bounded and subordinate to reading
-The reader SHALL prioritize the active passage, then prepare the next passage and remaining selected-day passages in the background with at most one background request in flight. Ready and in-flight requests SHALL be reused for navigation without duplicate requests for the same content identity. Foreground navigation SHALL take priority over background work. Day or translation changes SHALL cancel obsolete work and reject late results. Background rate-limit responses SHALL suspend further warming for at least the supplied retry delay; access/configuration failures SHALL stop warming for that scope. Background failures SHALL NOT replace or interrupt an available active passage.
+### Requirement: Adjacent preparation is bounded and subordinate to reading
+The reader SHALL prioritize the active passage, then prepare its next and previous passages in the background with at most one background request in flight. Both directions SHALL receive preparation before unrelated passages, and background work SHALL be limited to the active passage's available neighbors in the selected day. After navigation, preparation SHALL reprioritize the new neighbors. Ready and in-flight requests SHALL be reused for navigation without duplicate requests for the same compatible content identity, subject to the shared chapter source's retention and eviction rules. Foreground navigation SHALL take priority over background work. Day or translation changes SHALL cancel obsolete work and reject late results. Background rate-limit responses SHALL suspend further warming for at least the supplied retry delay; access/configuration failures SHALL stop warming for that scope. Background failures SHALL NOT replace or interrupt an available active passage.
 
 #### Scenario: Current passage loads first
 - **WHEN** a day is opened
-- **THEN** background preparation starts only after the current passage is usable, prioritizes the next passage, and loads only the selected day's bounded plan
+- **THEN** background preparation starts only after the current passage is usable, prepares the next and previous available passages sequentially, and does not request other passages merely for warming
+
+#### Scenario: Return swipe is prepared
+- **WHEN** the reader opens a middle passage with both neighbors available
+- **THEN** the previous as well as the next passage is prepared so a ready panel in either swipe direction shows its destination page
 
 #### Scenario: Navigation joins preparation
 - **WHEN** the reader navigates to a passage already ready or loading in the background
@@ -48,7 +52,7 @@ Background preparation and inactive panels SHALL NOT write progress, modify hist
 - **THEN** one history entry and a fresh activation are created, with reporting governed by actual Scripture visibility rather than the earlier fetch
 
 ### Requirement: Unavailable content retains honest recovery
-If destination content is not ready, the reader SHALL show a passage-labeled loading placeholder, complete navigation without waiting for background preparation, and restore the saved containing page once content becomes ready. If data becomes ready mid-gesture, the panel SHALL keep its horizontal position and render at the destination's saved page. A loading fallback SHALL NOT fabricate Scripture or reset saved progress. Committed failures SHALL retain safe retry behavior. Bounded ends, native vertical scroll/selection/pinch zoom, reduced motion, and non-gesture navigation SHALL retain the preceding screen-paged contract.
+If destination content or its fitted saved page is not ready, the reader SHALL show a passage-labeled loading placeholder, complete navigation without waiting for background preparation, and restore the saved containing page once content and fitting become ready. If the prepared page becomes ready mid-gesture, the panel SHALL keep its horizontal position and render at the destination's saved page. A loading fallback SHALL NOT fabricate Scripture or reset saved progress. Committed failures SHALL retain safe retry behavior. Bounded ends, native vertical scroll/selection/pinch zoom, reduced motion, and non-gesture navigation SHALL retain the published screen-paged contract.
 
 #### Scenario: Slow or failed destination
 - **WHEN** a swipe commits before destination data is available

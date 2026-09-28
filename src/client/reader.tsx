@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
 	parseReaderRoute,
 	type ReaderRoute,
@@ -13,6 +13,7 @@ import type {
 } from "../domain/semantic-chapter.js";
 import { mapTranslationLocation } from "../domain/translation-location.js";
 import { useBrowserAppearance } from "./browser-appearance.js";
+import { AdjacentPreparation } from "./adjacent-preparation.js";
 import {
 	ChapterLoadError,
 	type ChapterSource,
@@ -25,6 +26,7 @@ import {
 	usePassageGesture,
 } from "./passage-gesture.js";
 import { ReaderMenu } from "./reader-menu.js";
+import { passageLocation } from "./passage-location.js";
 import {
 	browserReadingStorage,
 	type Preferences,
@@ -36,6 +38,42 @@ import { Attribution, IntroTitles } from "./semantic-renderer.js";
 let activationSequence = 0;
 const identity = (route: ReaderRoute) =>
 	`${route.day}:${route.translation}:${route.book}:${route.chapter}`;
+function PassageIntro({
+	route,
+	chapter,
+	onBegin,
+}: {
+	route: ReaderRoute;
+	chapter: SemanticChapter;
+	onBegin?: () => void;
+}) {
+	const name = `${route.book === "PSA" ? "Psalm" : "Proverbs"} ${route.chapter}`;
+	return (
+		<article
+			className="intro"
+			tabIndex={-1}
+			aria-label={`${name} introduction`}
+		>
+			<div className="intro-literature">
+				<p className="eyebrow">
+					Day {route.day} · {route.translation}
+				</p>
+				<h1>{name}</h1>
+				<IntroTitles chapter={chapter} />
+				<p className="gesture-hint">
+					Swipe up to read · swipe left for the next passage
+				</p>
+				<button
+					className="text-action"
+					onClick={onBegin}
+					tabIndex={onBegin ? undefined : -1}
+				>
+					Begin reading <span aria-hidden="true">↓</span>
+				</button>
+			</div>
+		</article>
+	);
+}
 export function Reader({
 	source = networkChapterSource,
 	report = reportChapterDisplay,
@@ -46,6 +84,10 @@ export function Reader({
 	storage?: ReadingStorage;
 }) {
 	const repository = useRef(storage ?? browserReadingStorage()).current;
+	const preparation = useMemo(
+		() => (source.cacheAware ? new AdjacentPreparation(source) : undefined),
+		[source],
+	);
 	const [preferences, setPreferences] = useState(() =>
 		repository.preferences(),
 	);
@@ -54,6 +96,11 @@ export function Reader({
 	preferencesRef.current = preferences;
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [drag, setDrag] = useState<PassageDrag>({ phase: "idle", offset: 0 });
+	const [handoff, setHandoff] = useState<{
+		route: ReaderRoute;
+		direction: number;
+		restoreId: number;
+	}>();
 	const stage = useRef<HTMLDivElement>(null);
 	const menuTrigger = useRef<HTMLButtonElement>(null);
 	const actions = useRef<ReadingActions>(null);
@@ -91,6 +138,7 @@ export function Reader({
 		key: string;
 		activation: string;
 	}>();
+	const activeRequest = useRef<AbortController | undefined>(undefined);
 	const switchRequest = useRef<AbortController | undefined>(undefined);
 	const [switching, setSwitching] = useState<Translation>();
 	const [switchFailure, setSwitchFailure] = useState<{
@@ -116,7 +164,20 @@ export function Reader({
 	function flush() {
 		if (current.current) repository.savePosition(current.current);
 	}
-	function navigate(next: ReaderRoute, replace = false) {
+	function navigate(
+		next: ReaderRoute,
+		replace = false,
+		swipeDirection?: number,
+	) {
+		setHandoff(
+			previewChapter &&
+				previewKey === identity(next) &&
+				previewReady === previewPresentationKey &&
+				swipeDirection
+				? { route: next, direction: swipeDirection, restoreId: navigation.id }
+				: undefined,
+		);
+		activeRequest.current?.abort();
 		switchRequest.current?.abort();
 		setSwitching(undefined);
 		setSwitchFailure(undefined);
@@ -127,6 +188,17 @@ export function Reader({
 		readyNavigation.current = undefined;
 		current.current = undefined;
 		setVisibleLocation(undefined);
+		setError(undefined);
+		if (
+			previewChapter &&
+			previewKey === identity(next) &&
+			previewReady === previewPresentationKey
+		)
+			setResult({
+				chapter: previewChapter,
+				key: identity(next),
+				activation: `chapter-${++activationSequence}`,
+			});
 		window.history[replace ? "replaceState" : "pushState"](
 			null,
 			"",
@@ -136,6 +208,8 @@ export function Reader({
 	}
 	useEffect(() => {
 		const pop = () => {
+			setHandoff(undefined);
+			activeRequest.current?.abort();
 			switchRequest.current?.abort();
 			setSwitching(undefined);
 			setSwitchFailure(undefined);
@@ -163,16 +237,27 @@ export function Reader({
 	}, [repository]);
 	useEffect(() => {
 		if (!route) return;
+		preparation?.setActive(route);
+	}, [key, preparation]);
+	useEffect(() => () => preparation?.dispose(), [preparation]);
+	useEffect(() => {
+		if (route && result?.key === key) preparation?.startAfterUsable(route);
+	}, [key, result, preparation]);
+	useEffect(() => {
+		if (!route) return;
 		if (result?.key === key) return;
 		const controller = new AbortController();
+		activeRequest.current = controller;
 		setError(undefined);
 		setResult(undefined);
-		source
-			.get(route, controller.signal, {
-				translation: route.translation,
-				readingDay: route.day,
-				timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-			})
+		(preparation
+			? preparation.load(route, controller.signal)
+			: source.get(route, controller.signal, {
+					translation: route.translation,
+					readingDay: route.day,
+					timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+				})
+		)
 			.then((chapter) => {
 				if (!controller.signal.aborted)
 					setResult({
@@ -192,8 +277,12 @@ export function Reader({
 								),
 					);
 			});
-		return () => controller.abort();
-	}, [key, source, attempt]);
+		return () => {
+			controller.abort();
+			if (activeRequest.current === controller)
+				activeRequest.current = undefined;
+		};
+	}, [key, source, preparation, attempt]);
 	const chapter = result?.key === key ? result.chapter : undefined;
 	async function switchTranslation(translation: Translation) {
 		if (!route || translation === route.translation) return;
@@ -261,20 +350,7 @@ export function Reader({
 	let routeError = navigation.error;
 	if (route && chapter) {
 		try {
-			const saved = repository.position(route);
-			location = route.location
-				? route
-				: saved?.translation === route.translation
-					? saved
-					: {
-							...route,
-							location: preferences.intros
-								? "intro"
-								: chapter.verses[0]?.displayLabel,
-						};
-			if (location.location === "intro" && !preferences.intros)
-				location = { ...location, location: chapter.verses[0]?.displayLabel };
-			routeVerse(chapter, location);
+			location = passageLocation(route, chapter, preferences, repository);
 		} catch (failure) {
 			routeError = failure as RouteError;
 		}
@@ -313,12 +389,16 @@ export function Reader({
 	function changePassage(direction: number) {
 		const passage = plan[index + direction];
 		if (route && passage)
-			navigate({
-				...route,
-				...passage,
-				location: undefined,
-				orgIds: undefined,
-			});
+			navigate(
+				{
+					...route,
+					...passage,
+					location: undefined,
+					orgIds: undefined,
+				},
+				false,
+				direction,
+			);
 	}
 	const { slide, ...gestures } = usePassageGesture(changePassage, {
 		disabled: menuOpen || !route || !!routeError,
@@ -328,6 +408,72 @@ export function Reader({
 		width: () => stage.current?.clientWidth ?? window.innerWidth,
 	});
 	const neighbor = drag.direction ? plan[index + drag.direction] : undefined;
+	const previewRoute =
+		handoff?.route ??
+		(drag.phase !== "idle" && route && neighbor
+			? {
+					...route,
+					...neighbor,
+					location: undefined,
+					orgIds: undefined,
+				}
+			: undefined);
+	const previewKey =
+		previewRoute && source.cacheAware ? identity(previewRoute) : undefined;
+	const [previewResult, setPreviewResult] = useState<{
+		key: string;
+		chapter: SemanticChapter;
+	}>();
+	const [previewReady, setPreviewReady] = useState<string>();
+	const [previewLayoutRevision, setPreviewLayoutRevision] = useState(0);
+	useEffect(() => {
+		const resize = () => setPreviewLayoutRevision((value) => value + 1);
+		window.addEventListener("resize", resize);
+		return () => window.removeEventListener("resize", resize);
+	}, []);
+	const previewPresentationKey = `${previewKey}:${preferences.density}:${preferences.fontSize}:${previewLayoutRevision}`;
+	useEffect(() => setPreviewReady(undefined), [previewPresentationKey]);
+	useEffect(() => {
+		if (!previewRoute || !previewKey) return;
+		const controller = new AbortController();
+		setPreviewReady(undefined);
+		source
+			.get(previewRoute, controller.signal, {
+				translation: previewRoute.translation,
+				readingDay: previewRoute.day,
+				timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+			})
+			.then((chapter) => {
+				if (
+					!controller.signal.aborted &&
+					chapter.identity.translation === previewRoute.translation &&
+					chapter.identity.book === previewRoute.book &&
+					chapter.identity.chapter === previewRoute.chapter
+				)
+					setPreviewResult({ key: previewKey, chapter });
+			})
+			.catch(() => {
+				/* The labeled placeholder remains available. */
+			});
+		return () => controller.abort();
+	}, [previewKey, source]);
+	const previewChapter =
+		previewResult && previewKey && previewResult.key === previewKey
+			? previewResult.chapter
+			: undefined;
+	let previewLocation: ReaderRoute | undefined;
+	if (previewRoute && previewChapter) {
+		try {
+			previewLocation = passageLocation(
+				previewRoute,
+				previewChapter,
+				preferences,
+				repository,
+			);
+		} catch {
+			/* An invalid saved anchor leaves the preview unavailable. */
+		}
+	}
 	const passageName = route
 		? `${route.book === "PSA" ? "Psalm" : "Proverbs"} ${route.chapter}`
 		: "Reading link";
@@ -413,7 +559,12 @@ export function Reader({
 					</div>
 				)}
 			</header>
-			<div ref={stage} className="passage-stage" data-transition={drag.phase}>
+			<div
+				ref={stage}
+				className="passage-stage"
+				data-transition={drag.phase}
+				data-handoff={handoff ? "ready" : undefined}
+			>
 				<main
 					className="reading-scroll"
 					style={{ transform: `translateX(${drag.offset}px)` }}
@@ -475,7 +626,7 @@ export function Reader({
 						</section>
 					) : !chapter || !location ? (
 						<p className="reader-loading" role="status">
-							Loading Scripture…
+							Loading Scripture for {passageName}…
 						</p>
 					) : (
 						<>
@@ -489,43 +640,27 @@ export function Reader({
 								targetKey={intro ? "intro" : routeVerse(chapter, location)?.key}
 								intro={
 									preferences.intros ? (
-										<article
-											className="intro"
-											tabIndex={-1}
-											aria-label={`${passageName} introduction`}
-										>
-											<div className="intro-literature">
-												<p className="eyebrow">
-													Day {route?.day} · {route?.translation}
-												</p>
-												<h1>{passageName}</h1>
-												<IntroTitles chapter={chapter} />
-												<p className="gesture-hint">
-													Swipe up to read · swipe left for the next passage
-												</p>
-												<button
-													className="text-action"
-													onClick={() =>
-														navigate(
-															{
-																...location!,
-																location: chapter.verses[0]!.displayLabel,
-																orgIds: undefined,
-															},
-															true,
-														)
-													}
-												>
-													Begin reading <span aria-hidden="true">↓</span>
-												</button>
-											</div>
-										</article>
+										<PassageIntro
+											route={route!}
+											chapter={chapter}
+											onBegin={() =>
+												navigate(
+													{
+														...location!,
+														location: chapter.verses[0]!.displayLabel,
+														orgIds: undefined,
+													},
+													true,
+												)
+											}
+										/>
 									) : undefined
 								}
 								onReady={() => {
 									if (activeNavigation.current !== navigation.id) return;
 									readyNavigation.current = navigation.id;
 									record(location!);
+									setHandoff(undefined);
 								}}
 								onLocation={(verseKey) => {
 									if (
@@ -550,26 +685,73 @@ export function Reader({
 						</>
 					)}
 				</main>
-				{neighbor && drag.phase !== "idle" && (
-					<div
-						className="passage-preview"
+				{previewRoute && (drag.phase !== "idle" || handoff) && (
+					<main
+						className="passage-preview reading-scroll"
 						inert
 						aria-hidden="true"
 						style={{
-							transform: `translateX(calc(${drag.direction === 1 ? "100%" : "-100%"} + ${drag.offset}px))`,
+							transform: handoff
+								? "translateX(0)"
+								: `translateX(calc(${drag.direction === 1 ? "100%" : "-100%"} + ${drag.offset}px))`,
 						}}
 					>
-						<div>
+						<div
+							className="passage-preview-placeholder"
+							hidden={
+								!!previewChapter &&
+								!!previewLocation &&
+								previewReady === previewPresentationKey
+							}
+						>
 							<p className="eyebrow">
-								{drag.direction === 1 ? "Next reading" : "Previous reading"}
+								{(drag.direction || handoff?.direction) === 1
+									? "Next reading"
+									: "Previous reading"}
 							</p>
 							<h2>
-								{neighbor.book === "PSA" ? "Psalm" : "Proverbs"}{" "}
-								{neighbor.chapter}
+								{previewRoute.book === "PSA" ? "Psalm" : "Proverbs"}{" "}
+								{previewRoute.chapter}
 							</h2>
 							<p>Loading Scripture…</p>
 						</div>
-					</div>
+						{previewChapter && previewLocation && (
+							<div
+								className="passage-preview-content"
+								style={{
+									visibility:
+										previewReady === previewPresentationKey
+											? "visible"
+											: "hidden",
+								}}
+							>
+								<ReadingSurface
+									key={previewKey}
+									chapter={previewChapter}
+									passive
+									density={preferences.density}
+									fontSize={preferences.fontSize}
+									restoreId={handoff?.restoreId ?? navigation.id}
+									targetKey={
+										previewLocation.location === "intro"
+											? "intro"
+											: routeVerse(previewChapter, previewLocation)?.key
+									}
+									intro={
+										preferences.intros ? (
+											<PassageIntro
+												route={previewRoute!}
+												chapter={previewChapter}
+											/>
+										) : undefined
+									}
+									onReady={() => setPreviewReady(previewPresentationKey)}
+									onPreparing={() => setPreviewReady(undefined)}
+								/>
+								<Attribution chapter={previewChapter} />
+							</div>
+						)}
+					</main>
 				)}
 			</div>
 			<nav className="passage-indicators" aria-label="Passages">

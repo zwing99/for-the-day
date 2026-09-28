@@ -1,0 +1,19 @@
+# Verification checkpoint
+
+2026-09-28. All browser captures below use public-domain WEBU at Psalm 23:2 → Psalm 53:3. Screenshots are ignored local artifacts under `.local/verification/`; no licensed text was committed.
+
+| Viewport (CSS px) | Ready saved-page alignment | Effective preview size | Result |
+| --- | ---: | ---: | --- |
+| 320×568 | 0 px | 17.4368 px | Complete page fit |
+| 390×844 | 0 px | 20 px | Complete page fit |
+| 667×375 | 0 px | 16 px | Complete page fit |
+| 768×1024 | 0 px | 20 px | Complete page fit |
+| 1200×800 | 0 px | 20 px | Complete page fit |
+
+For each viewport, `last-seen-ready-preview-<width>x<height>.png`, `last-seen-ready-settling-<width>x<height>.png`, and `last-seen-ready-committed-<width>x<height>.png` record the partial, settling, and committed frames. The parallel `last-seen-delayed-*` captures show a labeled loading panel through commitment and direct restoration to Psalm 53:3 after release of a delayed local static response. At 390×844 the ready preview and committed panel have identical semantic text order (952 characters), page identity, and computed size; the addressed page aligns at 0 px. The delayed committed frame has no introduction flash.
+
+Additional checks: both-direction Psalm 23:2 ↔ Psalm 53:3 round trips kept the saved logical references and pushed history once per commitment; horizontal trackpad input navigated once; keyboard/menu navigation, interruption, cancellation, reduced motion, bounded ends, and a failed committed load with retry passed component/browser checks. Compact density and larger type retained a fitted saved page at 390×844. Chromium native pinch zoom reached `visualViewport.scale = 1.5` without changing the passage or reference. Invented packed/merged verse fixtures exercised logical identity restoration. The cached CSB benchmark matrix passed 1,260 Chromium/WebKit cases at seven viewport sizes without upstream requests; the full corpus maxima were not remeasured because typography and semantic formatting did not change.
+
+Chromium and WebKit each passed 28 responsive route/menu cases plus failure recovery without provider requests. The Chromium browser test compares a visible saved-page preview with its settled committed page and samples animation frames through commitment. It catches typography, text grouping, width drift, or loss of the saved page during the measured active-surface handoff. WebKit's automation runtime rejects synthetic `Touch` construction, so that specific gesture assertion was run in Chromium. Physical iPhone Mirroring previously showed a complete horizontal passage swipe, and the user observed the held preview was correct but a single-verse page briefly appeared after release. The handoff fix has passed browser verification. Mirroring later reconnected, but an automated drag left the displayed passage unchanged, so the fix has not yet been confirmed by a physical finger swipe. Mirroring does not establish iOS version or Safari tab behavior.
+
+Storage and network review: browser position storage contains versioned logical URLs and preferences only. The chapter source uses the existing IndexedDB `for-the-day-chapters` repository, with its admission, freshness, and eviction rules; WEBU uses local static content. Adjacent preparation only calls this shared source for the immediately previous and next plan entries, one background request at a time. Preview rendering does not call progress/history or display reporting. A ready commitment receives a fresh activation and reports once when the active surface becomes ready. No competing chapter pool or cache clearing was introduced. `mise run check` passed 278 unit tests plus typecheck/lint/format, `mise run build` passed, `mise run test:browser` passed 28 cases in each engine, and `openspec validate last-seen-passage-previews --strict` passed.

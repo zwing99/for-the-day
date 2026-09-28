@@ -170,7 +170,9 @@ describe("CSB display activation", () => {
 				.mockResolvedValueOnce(semanticFixture()),
 		};
 		render(<Reader source={source} report={vi.fn()} />);
-		expect(screen.getByRole("status").textContent).toBe("Loading Scripture…");
+		expect(screen.getByRole("status").textContent).toBe(
+			"Loading Scripture for Psalm 23…",
+		);
 		await screen.findByRole("alert");
 		fireEvent.click(screen.getByRole("button", { name: "Try again" }));
 		await screen.findByRole("button", { name: "Begin reading" });
@@ -212,11 +214,17 @@ it("cached return creates a fresh FUMS activation while retaining references and
 		expect(track).toHaveBeenCalledTimes(2);
 		fireEvent.click(screen.getByRole("button", { name: "Begin reading" }));
 		await waitFor(() => expect(track).toHaveBeenCalledTimes(3));
-		expect(get.mock.calls.map((c) => c[0].chapter)).toEqual([23, 53]);
+		expect(
+			get.mock.calls
+				.filter((c) => [23, 53].includes(c[0].chapter))
+				.map((c) => c[0].chapter),
+		).toEqual([23, 53]);
 		expect(window.location.pathname).toContain("/psalm/23/");
 		window.dispatchEvent(new Event("focus"));
 		window.dispatchEvent(new Event("online"));
-		expect(get).toHaveBeenCalledTimes(2);
+		expect(
+			get.mock.calls.filter((c) => [23, 53].includes(c[0].chapter)),
+		).toHaveLength(2);
 		view.unmount();
 		window.history.replaceState(null, "", "/23/psalm/23/1a?translation=CSB");
 		render(
@@ -226,7 +234,9 @@ it("cached return creates a fresh FUMS activation while retaining references and
 			/>,
 		);
 		await waitFor(() => expect(track).toHaveBeenCalledTimes(4));
-		expect(get).toHaveBeenCalledTimes(2);
+		expect(
+			get.mock.calls.filter((c) => [23, 53].includes(c[0].chapter)),
+		).toHaveLength(2);
 	} finally {
 		repository.dispose();
 	}

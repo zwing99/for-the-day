@@ -67,10 +67,12 @@ export function ReadingSurface({
 	restoreId,
 	onLocation,
 	onReady,
+	onPreparing,
 	density = "Spacious",
 	fontSize = "normal",
 	actions,
 	intro,
+	passive = false,
 }: {
 	chapter: SemanticChapter;
 	actions?: Ref<ReadingActions>;
@@ -79,8 +81,10 @@ export function ReadingSurface({
 	restoreId?: number;
 	onLocation?: (key: string) => void;
 	onReady?: () => void;
+	onPreparing?: () => void;
 	density?: Density;
 	fontSize?: "normal" | "large" | "larger";
+	passive?: boolean;
 }) {
 	const content = useRef<HTMLDivElement>(null);
 	const [active, setActive] = useState(targetKey ?? chapter.verses[0]?.key);
@@ -91,6 +95,7 @@ export function ReadingSurface({
 	const [budget, setBudget] = useState({ columns: 28, lines: 16 });
 	const [surfaceSize, setSurfaceSize] = useState({ width: 0, height: 0 });
 	const [fontRevision, setFontRevision] = useState(0);
+	const [measurementReady, setMeasurementReady] = useState(false);
 	const [labelRevision, setLabelRevision] = useState(0);
 	const [layoutOverride, setLayoutOverride] = useState<{
 		key: string;
@@ -114,6 +119,15 @@ export function ReadingSurface({
 		.map(([key, scale]) => `${key}:${scale}`)
 		.join(";");
 	const packingKey = cards.map((card) => card.key).join(";");
+	const fitReady =
+		measurementReady &&
+		fontRevision > 0 &&
+		layoutOverride?.key === layoutKey &&
+		fitOverride?.key === layoutKey;
+	useLayoutEffect(() => {
+		if (content.current?.closest("main")?.clientHeight && !fitReady)
+			onPreparing?.();
+	}, [fitReady, onPreparing]);
 	useLayoutEffect(() => {
 		const surface = content.current?.closest("main");
 		if (!surface || !surface.clientHeight) return;
@@ -184,10 +198,12 @@ export function ReadingSurface({
 					? current
 					: next,
 			);
+			setMeasurementReady(true);
 		}
 		const resize = () => {
 			if (disposed) return;
 			restoring.current = true;
+			setMeasurementReady(false);
 			clearTimeout(timer);
 			timer = setTimeout(measure, 120);
 		};
@@ -323,6 +339,9 @@ export function ReadingSurface({
 	callbacks.current = { onLocation, onReady };
 	useLayoutEffect(() => {
 		if (restoreId === undefined) return;
+		// Layoutless DOM tests have no measurable surface. Real surfaces wait
+		// until measured packing and fitting complete before announcing readiness.
+		if (content.current?.closest("main")?.clientHeight && !fitReady) return;
 		const navigation = priorRestore.current !== restoreId;
 		const wanted = navigation ? targetKey : anchor.current;
 		priorRestore.current = restoreId;
@@ -351,14 +370,14 @@ export function ReadingSurface({
 			});
 			surface.style.scrollSnapType = "";
 			setActive(wanted);
-			if (navigation && !document.querySelector("dialog[open]"))
+			if (!passive && navigation && !document.querySelector("dialog[open]"))
 				card.focus({ preventScroll: true });
 		}
 		let second = 0;
 		const frame = requestAnimationFrame(() => {
 			second = requestAnimationFrame(() => {
 				restoring.current = false;
-				if (completedRestore.current !== restoreId) {
+				if (passive || completedRestore.current !== restoreId) {
 					completedRestore.current = restoreId;
 					callbacks.current.onReady?.();
 				} else if (wanted) callbacks.current.onLocation?.(wanted);
@@ -372,13 +391,17 @@ export function ReadingSurface({
 		restoreId,
 		targetKey,
 		packingKey,
+		fitReady,
+		fontScaleKey,
 		budget,
 		density,
 		fontSize,
 		fontRevision,
 		surfaceSize,
+		passive,
 	]);
 	useEffect(() => {
+		if (passive) return;
 		const element = content.current;
 		const surface = element?.closest("main");
 		if (!element || !surface) return;
@@ -482,7 +505,7 @@ export function ReadingSurface({
 			surface.removeEventListener("touchstart", resumeSnap);
 			surface.removeEventListener("keydown", resumeSnap);
 		};
-	}, [chapter, packingKey, !!intro]);
+	}, [chapter, packingKey, !!intro, passive]);
 	function move(direction: number) {
 		const surface = content.current?.closest("main");
 		const cards = [
@@ -541,6 +564,7 @@ export function ReadingSurface({
 			}
 			data-active-verse={active}
 			onKeyDown={(event) => {
+				if (passive) return;
 				if (
 					document.getSelection()?.toString() ||
 					interactiveTarget(event.target) ||

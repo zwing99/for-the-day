@@ -12,6 +12,29 @@ import { semanticFixture } from "../../fixtures/semantic-chapter.js";
 
 afterEach(cleanup);
 afterEach(() => vi.restoreAllMocks());
+it("restores a passive page without focus, location, or keyboard activity", () => {
+	const focus = vi.spyOn(HTMLElement.prototype, "focus");
+	const onLocation = vi.fn();
+	const onReady = vi.fn();
+	const scroll = vi.fn();
+	HTMLElement.prototype.scrollTo = scroll;
+	const { container } = render(
+		<main>
+			<ReadingSurface
+				chapter={semanticFixture()}
+				targetKey="b"
+				restoreId={10}
+				passive
+				onLocation={onLocation}
+				onReady={onReady}
+			/>
+		</main>,
+	);
+	expect(scroll).toHaveBeenCalled();
+	expect(focus).not.toHaveBeenCalled();
+	fireEvent.keyDown(container.querySelector("article")!, { key: "ArrowDown" });
+	expect(onLocation).not.toHaveBeenCalled();
+});
 it("completes restoration once when layout changes before the readiness frames finish", () => {
 	const frames = new Map<number, FrameRequestCallback>();
 	let sequence = 0;

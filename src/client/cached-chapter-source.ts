@@ -47,6 +47,7 @@ export function cachedChapterSource(
 		}
 	}
 	return {
+		cacheAware: true,
 		async get(passage, signal, context) {
 			await startup;
 			if (signal.aborted) throw cancelled();
@@ -151,6 +152,7 @@ export function browserChapterSource(): ChapterSource {
 	const staticSource = staticWebuSource();
 	let licensed: ChapterSource | undefined;
 	return {
+		cacheAware: true,
 		get(passage, signal, context) {
 			if (context?.translation === "WEBU")
 				return staticSource.get(passage, signal, context);

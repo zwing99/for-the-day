@@ -1,7 +1,11 @@
 import { strictEqual } from "node:assert";
 import { chromium, webkit } from "playwright";
 import { semanticFixture } from "../tests/fixtures/semantic-chapter.js";
-import { assertReaderGeometry, settledReader } from "./reader-geometry.js";
+import {
+	assertReaderGeometry,
+	assertShellGeometry,
+	settledReader,
+} from "./reader-geometry.js";
 
 if (process.env.BROWSER_EDITION === "WEBU") {
 	await import("./verify-webu-browser.js");
@@ -50,6 +54,8 @@ for (const [name, engine] of [
 		for (const [width, height] of [
 			[320, 568],
 			[390, 844],
+			[402, 874],
+			[430, 932],
 			[844, 390],
 			[820, 1180],
 			[507, 768],
@@ -63,6 +69,7 @@ for (const [name, engine] of [
 					.waitFor({ state: "attached" });
 				await settledReader(page);
 				await assertReaderGeometry(page);
+				await assertShellGeometry(page);
 				await page.setViewportSize({ width: width + 10, height: height + 10 });
 				await page.waitForTimeout(400);
 				strictEqual(
@@ -72,6 +79,7 @@ for (const [name, engine] of [
 					"b",
 				);
 				await assertReaderGeometry(page);
+				await assertShellGeometry(page);
 				await page.setViewportSize({ width, height });
 				await page.waitForTimeout(400);
 				await page.getByRole("button", { name: "Open reader menu" }).click();
@@ -112,7 +120,7 @@ for (const [name, engine] of [
 			.waitFor({ state: "attached" });
 		strictEqual(errors.length, 0);
 		console.log(
-			`${name}: 20 responsive route/menu cases and failure recovery passed; no provider requests.`,
+			`${name}: 28 responsive route/menu cases and failure recovery passed; no provider requests.`,
 		);
 	} catch (cause) {
 		throw new Error(`${name} browser verification failed at ${checkpoint}.`, {

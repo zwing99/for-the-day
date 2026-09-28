@@ -94,6 +94,64 @@ export async function assertReaderGeometry(page: Page) {
 	return geometry;
 }
 
+export async function assertShellGeometry(page: Page) {
+	const bounds = await page.evaluate(() => {
+		const rect = (selector: string) =>
+			document.querySelector(selector)!.getBoundingClientRect();
+		const shell = rect(".reader-shell");
+		const header = rect(".reader-context");
+		const stage = rect(".passage-stage");
+		const surface = rect(".reading-scroll");
+		const footer = rect(".passage-indicators");
+		const menu = rect(".menu-trigger");
+		return {
+			viewport: innerHeight,
+			shellTop: shell.top,
+			shellBottom: shell.bottom,
+			headerBottom: header.bottom,
+			stageTop: stage.top,
+			stageBottom: stage.bottom,
+			surfaceTop: surface.top,
+			surfaceBottom: surface.bottom,
+			footerTop: footer.top,
+			footerBottom: footer.bottom,
+			footerVisible:
+				getComputedStyle(document.querySelector(".passage-indicators")!)
+					.display !== "none",
+			menuWidth: menu.width,
+			menuHeight: menu.height,
+		};
+	});
+	ok(Math.abs(bounds.shellTop) <= 1, "Shell starts at the viewport top");
+	ok(
+		Math.abs(bounds.shellBottom - bounds.viewport) <= 1,
+		"Shell fills the available window",
+	);
+	ok(
+		Math.abs(bounds.headerBottom - bounds.stageTop) <= 1 &&
+			(!bounds.footerVisible ||
+				Math.abs(bounds.stageBottom - bounds.footerTop) <= 1),
+		"Header, stage, and footer share contiguous grid rows",
+	);
+	ok(
+		Math.abs(bounds.surfaceTop - bounds.stageTop) <= 1 &&
+			Math.abs(bounds.surfaceBottom - bounds.stageBottom) <= 1,
+		"Measured surface fills its grid row",
+	);
+	ok(
+		Math.abs(
+			(bounds.footerVisible ? bounds.footerBottom : bounds.stageBottom) -
+				bounds.viewport,
+		) <= 1,
+		"Footer reaches the available window bottom",
+	);
+	ok(
+		bounds.menuWidth >= 44 && bounds.menuHeight >= 44,
+		"Menu has a 44px target",
+	);
+	return bounds;
+}
+
 export async function settledReader(page: Page) {
 	await page.locator(".verse-card").first().waitFor();
 	await page.evaluate(() => document.fonts.ready);

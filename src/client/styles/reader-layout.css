@@ -6,6 +6,15 @@
 	display: grid;
 	grid-template-rows: auto minmax(0, 1fr) auto;
 }
+/* iOS Home Screen mode can report dvh as the small viewport even without
+   browser chrome. vh expands the standalone web layer to the full screen. */
+@supports (-webkit-touch-callout: none) {
+	@media (display-mode: standalone) {
+		.reader-shell {
+			height: 100vh;
+		}
+	}
+}
 .reading-scroll {
 	overflow-y: auto;
 	overscroll-behavior-y: contain;
@@ -48,22 +57,22 @@
 	color: var(--reader-muted);
 	background: var(--reader-background);
 }
-/* Shift only header contents; keep the reading surface and bottom row in place. */
+/* The iOS standalone status treatment can blur content just below its safe
+   inset. Reserve clearance in the grid so the label and menu stay readable. */
 @supports (-webkit-touch-callout: none) {
 	@media (display-mode: standalone) and (orientation: portrait) and (
 			min-height: 601px
 		) {
-		.reader-context > div,
-		.reader-context > .menu-trigger {
-			position: relative;
-			top: 10px;
+		.reader-context {
+			padding-top: calc(max(0.5rem, env(safe-area-inset-top)) + 28px);
 		}
 	}
 }
 
 .reader-brand {
-	font-size: 0.7rem;
+	font-size: 0.8rem;
 	letter-spacing: 0.04em;
+	color: var(--reader-text);
 }
 
 .reader-context p {

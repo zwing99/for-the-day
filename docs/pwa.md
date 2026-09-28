@@ -1,5 +1,44 @@
 # Installable application shell
 
+## iPhone Mirroring viewport trial — 2026-09-28
+
+The iPhone 17 Pro was running the reader from `mise run host` in Home Screen standalone mode, so Vite edits appeared live. In portrait dark mode, the original intro had a 62 CSS pixel band below the footer, and the small “For the day” brand looked blurred against the status treatment. A temporary local probe was shown on the phone and then removed. Its user agent contained `iPhone OS 18_7` and `Version/27.0`; that string is not a reliable OS-version measurement, so the installed iOS version remains unconfirmed.
+
+| CSS pixels | Before (`100dvh`) | Trial/final (`100vh` in iOS standalone) |
+| --- | ---: | ---: |
+| Screen | 402×874 | 402×874 |
+| `innerWidth × innerHeight` | 402×812 | 402×874 |
+| `documentElement.clientWidth × clientHeight` | 402×812 | 402×812 |
+| Visual viewport; offset; scale | 402×812; 0; 1 | 402×874; 0; 1 |
+| `100vh` / `100dvh` / `100svh` / `100lvh` | 874 / 812 / 812 / 874 | 874 / 874 / 812 / 874 |
+| Safe area top/right/bottom/left | 62 / 0 / 34 / 0 | 62 / 0 / 34 / 0 |
+| Shell | 0–812 | 0–874 |
+| Header | 0–113 | 0–113 before top-clearance adjustment |
+| Reading surface | 113–734 (621 high) | 113–796 (683 high) before top-clearance adjustment |
+| Footer | 734–812 (78 high) | 796–874 (78 high) |
+
+The 62px gap began exactly where the `100dvh` shell ended. A live `100vh` trial put the footer and passage indicators at the physical screen bottom, with the 34px home-indicator safe area still inside the footer. The final scoped CSS rule reproduced that result without the probe. The header first reserved 24px more space after the reported top safe inset in tall portrait standalone mode. At that point, on a settled Scripture page, the shell was 0–874, header 0–137, brand 89–106, menu 88–132 (44px target), surface 137–796 (659px), and footer 796–874. The active page aligned at 137–796, exactly matching the surface; the preceding intro was −522–137. The intro and first Scripture page were visually checked in dark mode, and the Scripture page was also checked in light mode. The brand remained visible at 0.8rem with full text color; the menu and passage label did not overlap it. The appearance preference was restored to `system` after testing. At the user's request, the header clearance was increased another 4px to 28px; the user visually confirmed the result on the phone after iPhone Mirroring disconnected. Landscape, Safari tab mode, rotation, zoom, keyboard dismissal, saved-location restoration, and the installed iOS version still need checks.
+
+[WebKit bug 301994](https://bugs.webkit.org/show_bug.cgi?id=301994) describes a similar Home Screen viewport mismatch. This phone's measured `vh`/`dvh` split and successful live trial support the scoped `100vh` correction, while ordinary browser tabs retain `100dvh`.
+
+### Cached fit and browser checks
+
+`mise run check` passed both typechecks, lint, format, and 265 unit tests; `mise run build` passed. The browser regression passed 28 mocked route/menu cases in each of Chromium and WebKit, including 320/390/402/430px phone widths and contiguous shell/surface/footer bounds. No provider requests were made.
+
+With `VERSE_FIT_SCOPE=benchmarks`, 1,260 cached CSB cases passed across Chromium and WebKit: five standing worst-case references, three densities, normal/large/larger size, 16px/20px root type, and seven portrait, landscape, tablet, and desktop viewports. The following minima combine both engines and all size settings; every tested page fit completely. The browser matrices used ordinary tab geometry with no simulated phone safe area; the physical standalone portrait surface measured 659px as recorded above.
+
+| Viewport | Minimum surface / content height | Minimum effective Scripture size |
+| --- | ---: | ---: |
+| 320×568 | 519px / 502px | 10.54px |
+| 390×844 | 723px / 642px | 15.68px |
+| 430×932 | 811px / 730px | 20px |
+| 844×390 | 341px / 324px | 11.25px |
+| 820×1180 | 1059px / 978px | 20px |
+| 507×768 | 647px / 566px | 18.93px |
+| 1440×900 | 779px / 698px | 20px |
+
+The 10.54px minimum was Psalm 60:1 with attached headings at 320×568 under `larger` plus a 20px root size; 11.25px was the same reference in short landscape. At normal size with a 16px root, the minimum effective size was 16px. These unusually small combined larger-type/zoom cases need a legibility review before calling the fit acceptance complete. All five required cached chapters were present; no full-corpus remeasurement or live provider scan occurred.
+
 Run `mise run build`, then `mise run preview`, and open `http://127.0.0.1:4173`. Preview uses built assets and the local Hono API proxy. The manifest declares a standalone window, root start URL/scope, and 192px/512px icons exported from the existing logo. iOS metadata includes a 180px Apple touch icon and a translucent status bar. The page background and browser theme color follow the reader's explicit appearance preference or live system appearance, so a dark reader also paints the safe-area canvas dark. Physical iPhone/iPad installation remains part of the later device review.
 
 Service workers require a secure browser context: localhost/loopback preview qualifies, but a phone's plain HTTP LAN URL from `mise run host` does not. That task remains useful for ordinary reader interaction testing. No HTTPS deployment infrastructure is added. See [MDN's service-worker guide](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers) for the browser lifecycle and secure-context rules.
@@ -46,9 +85,9 @@ The header adjustment passed 198 offline cases using all five saved CSB worst-ca
 
 Large/larger preferences passed at 320×568 and 844×390, with minimum effective sizes of 15.12px/14.12px respectively for ESV Psalm 57:1. The 200% root-text case passed at 320×568 with a 444px surface and a 15.09px minimum. These minima reflect indivisible-page fitting under the existing user-approved policy, not a lower saved font preference. No new full-corpus scan or live provider requests were needed for this safe-area change.
 
-### Current correction: a 10px visual header nudge
+### Earlier correction: a 10px visual header nudge
 
-The user clarified that only a subtle 10px movement of the top text was intended. The padding-based workaround above has been superseded: header padding is restored to its original safe-area calculation. Only the header text container and menu button receive a relative 10px downward offset in installed iOS/WebKit portrait windows taller than 600px. This does not reserve additional layout height, repack Scripture, or move the bottom passage indicators. Short windows, landscape and ordinary browser windows retain their original placement.
+At this earlier milestone, only the header text container and menu button received a relative 10px downward offset in installed iOS/WebKit portrait windows taller than 600px. The live iPhone check above showed the brand remained blurred. The current implementation replaces that visual offset with 28px of header space after the safe-area inset, so the reading surface is remeasured and repacked.
 
 Chromium simulated the iOS/standalone conditions and a 59px top/34px bottom safe area at 390×844. The brand moved from y=63.5px to 73.5px and menu from y=60.02px to 70.02px. Before and after, the reading surface stayed at y=109.04–766px and the bottom controls at y=766–844px. All 212 tests and the production build passed. Actual iPhone blur clearance still needs device confirmation. No provider calls were made.
 

@@ -7,7 +7,7 @@ Provide complete Scripture on vertically snapping viewport pages and direct hori
 ## Requirements
 
 ### Requirement: Vertical scrolling settles on complete screens
-The reader SHALL use pages equal to the actual usable reading viewport, excluding quiet chrome and safe areas. After vertical touch, wheel, trackpad, keyboard, or programmatic navigation settles, a page boundary SHALL align with the viewport within two CSS pixels; the reader SHALL NOT remain between screens. Intro and end-of-passage presentation SHALL respect this sequence. Passage ends SHALL remain bounded without automatic passage changes. Resizing, restoration, and density changes SHALL align the page containing the logical verse, rather than place that verse midway in the viewport.
+The reader SHALL use pages equal to the actual usable reading viewport, excluding quiet chrome and safe areas. In standalone phone portrait mode, the available app window SHALL determine shell and reading-surface geometry rather than a fixed device-model size. After vertical touch, wheel, trackpad, keyboard, or programmatic navigation settles, a page boundary SHALL align with the viewport within two CSS pixels; the reader SHALL NOT remain between screens. Intro and end-of-passage presentation SHALL respect this sequence. Passage ends SHALL remain bounded without automatic passage changes. Resizing, restoration, and density changes SHALL align the page containing the logical verse, rather than place that verse midway in the viewport.
 
 #### Scenario: Partial vertical drag
 - **WHEN** a reader releases a vertical drag between two pages
@@ -16,6 +16,10 @@ The reader SHALL use pages equal to the actual usable reading viewport, excludin
 #### Scenario: Restored packed verse
 - **WHEN** an explicit or saved verse belongs to a grouped page
 - **THEN** that entire page is aligned and the addressed verse identity is retained
+
+#### Scenario: Installed phone portrait page
+- **WHEN** an installed phone reader opens in portrait
+- **THEN** the shell and reading pages use the available app window, and a settled page aligns with the reading surface within two CSS pixels
 
 ### Requirement: Complete Scripture fits each reading page
 Pages SHALL retain complete verses and inseparable merged spans, provider text, line breaks, indentation, heading associations, and literary order. Balanced and Compact SHALL reduce grouping at valid complete-verse boundaries before shrinking text. An indivisible oversized page SHALL reduce its rendered typography only as much as required to fit both available height and width. It SHALL NOT continue onto another screen, clip text, remove lines, or introduce an internal reading scrollbar. Fit adjustments SHALL NOT overwrite the selected font-size preference. Ordinary pages SHALL use the selected size; default typography SHALL fit the measured real CSB worst-case benchmarks without per-page shrinking in supported portrait phone viewports.

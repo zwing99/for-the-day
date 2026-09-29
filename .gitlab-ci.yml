@@ -126,8 +126,6 @@ build:
 beta:plan:
   extends: .aws-terraform
   stage: plan
-  when: manual
-  allow_failure: false
   needs:
     - job: build
       artifacts: true
@@ -151,8 +149,6 @@ beta:plan:
 beta:apply:
   extends: .aws-terraform
   stage: deploy
-  when: manual
-  allow_failure: false
   needs:
     - job: build
       artifacts: true

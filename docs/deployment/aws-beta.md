@@ -6,7 +6,7 @@ The beta hostname is `fortheday.beckyandzac.com`. GitLab.com is the canonical re
 | --- | --- | --- |
 | `terraform/` | `beta-app` | Dedicated public hosted zone, then ACM, CloudFront, private S3, API Gateway, Lambda, and DynamoDB |
 
-The first apply creates only the public hosted zone. The app resources are enabled in that same root after the parent delegates the zone.
+Pushes to protected `main` deploy automatically after checks. The first apply creates only the public hosted zone. The app resources are enabled in that same root after the parent delegates the zone.
 
 ## GitLab project and AWS OIDC role
 
@@ -35,10 +35,9 @@ GitLab CI uses the job token for the HTTP state backend. State addresses are ass
 
 Run the first setup in this order:
 
-1. Run the protected `main` pipeline and confirm unit tests, builds, and Terraform validation pass.
-2. Confirm `module "app"` remains commented out in `terraform/main.tf`. Start the manual `beta:plan` job and review it; then start the single manual `beta:apply` job. It creates only the dedicated public hosted zone. Copy the four `name_servers` values from its output.
+1. Push the DNS-only configuration to protected `main`. The pipeline runs checks, plans, then starts the single apply job automatically. It creates only the dedicated public hosted zone. Copy the four `name_servers` values from its output.
 3. Add those four NS records at the `beckyandzac.com` parent DNS provider. The deployment role has no parent-zone permissions. Wait until public DNS resolves the child zone's NS records.
-4. Uncomment `module "app"` in `terraform/main.tf` and the application outputs in `terraform/outputs.tf`. Confirm the protected beta provider variables listed above are present. Start the manual `beta:plan` job and review its output. Then start the same `beta:apply` job; it applies the app resources, waits for DNS certificate validation, publishes the matching Lambda build, uploads static assets, and invalidates the entry document paths.
+4. Uncomment `module "app"` in `terraform/main.tf` and the application outputs in `terraform/outputs.tf`. Confirm the protected beta provider variables listed above are present, then push to protected `main`. The same plan/apply jobs run automatically; apply provisions the app resources, waits for DNS certificate validation, publishes the matching Lambda build, uploads static assets, and invalidates the entry document paths.
 5. Review the job output and then run `mise run verify:beta -- https://fortheday.beckyandzac.com` (or the equivalent release check) to verify DNS/TLS, health, the SPA shell and deep link, WEBU JSON, and a missing asset. It makes no licensed-provider requests.
 
 The app configuration in `terraform/main.tf` composes `modules/app`, which wires the cache, runtime IAM, API, and frontend modules; the same file calls the reusable DNS module. CI calls `terraform apply` directly after checks, without saving or publishing a plan file. Terraform marks provider inputs sensitive for terminal output, but they are still present in Lambda configuration and the `beta-app` Terraform state. Project members with sufficient access may be able to download that state. Restrict project membership, state access, CI variable editing, and AWS Lambda configuration access. The public reader never receives provider values.
@@ -64,7 +63,7 @@ Do not run the DynamoDB Local integration suite in CI. Locally, it remains avail
 
 ## Rotation, release retention, and rollback
 
-To rotate a provider key or edition ID, change its protected GitLab variable and run `beta:plan`, review the result, then run `beta:apply`. Terraform applies a new Lambda configuration; no Lambda invocation-time secret lookup is used. Never use `set -x`, `env`, or a command that prints `TF_VAR_*` values.
+To rotate a provider key or edition ID, change its protected GitLab variable and push a deployment commit to protected `main`. The automatic plan/apply pipeline updates the Lambda configuration; no Lambda invocation-time secret lookup is used. Never use `set -x`, `env`, or a command that prints `TF_VAR_*` values.
 
 Every release uses the commit SHA as its release identifier. The publish job retains the matching Lambda ZIP and frontend files under the private bucket's `releases/<commit-sha>/` prefix and does not delete older hashed or WEBU revision assets from the live root. The root `index.html`, service worker, and manifest are uploaded after immutable assets. S3 object versioning also retains older root documents.
 

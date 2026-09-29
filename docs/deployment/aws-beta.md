@@ -27,7 +27,7 @@ The project already has the five provider variables below. Keep them **Protected
 
 The role ARN is an identifier rather than a secret, but protect it with the same environment and branch restrictions. Confirm variable presence with `glab variable list`; it reports names and scope but does not display values. Keep GitLab pipeline debug tracing disabled.
 
-The `aws-oidc-test` job runs on protected `main` pipelines before deployment. It exchanges the GitLab ID token for temporary AWS credentials and prints only the caller account and role ARN. If it fails, compare the role's provider ARN, audience, project and namespace IDs, and `sub` branch condition before investigating later deployment jobs.
+The OIDC exchange is exercised directly by the protected `beta:plan` and `beta:apply` jobs. A standalone exchange was already verified successfully. If a deployment job fails during STS exchange, compare the role's provider ARN, audience, project and namespace IDs, and `sub` branch condition.
 
 ## Terraform state and first deployment
 
@@ -35,7 +35,7 @@ GitLab CI uses the job token for the HTTP state backend. State addresses are ass
 
 Run the first setup in this order:
 
-1. Run the protected `main` pipeline and confirm `aws-oidc-test`, unit tests, builds, and Terraform validation pass.
+1. Run the protected `main` pipeline and confirm unit tests, builds, and Terraform validation pass.
 2. Confirm `module "app"` remains commented out in `terraform/main.tf`. Start the manual `beta:plan` job and review it; then start the single manual `beta:apply` job. It creates only the dedicated public hosted zone. Copy the four `name_servers` values from its output.
 3. Add those four NS records at the `beckyandzac.com` parent DNS provider. The deployment role has no parent-zone permissions. Wait until public DNS resolves the child zone's NS records.
 4. Uncomment `module "app"` in `terraform/main.tf` and the application outputs in `terraform/outputs.tf`. Confirm the protected beta provider variables listed above are present. Start the manual `beta:plan` job and review its output. Then start the same `beta:apply` job; it applies the app resources, waits for DNS certificate validation, publishes the matching Lambda build, uploads static assets, and invalidates the entry document paths.

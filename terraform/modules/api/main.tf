@@ -12,7 +12,6 @@ resource "aws_lambda_function" "api" {
 
   environment {
     variables = {
-      AWS_REGION       = var.aws_region
       DYNAMODB_TABLE   = var.table_name
       API_BIBLE_KEY    = var.api_bible_key
       API_BIBLE_CSB_ID = var.api_bible_csb_id
@@ -30,7 +29,6 @@ resource "aws_lambda_function" "api" {
         API_BIBLE_NIV_ID = var.api_bible_niv_id
         API_BIBLE_NLT_ID = var.api_bible_nlt_id
         CROSSWAY_KEY     = var.crossway_key
-        AWS_REGION       = var.aws_region
         DYNAMODB_TABLE   = var.table_name
       })) <= 4096
       error_message = "The complete Lambda environment must stay within AWS Lambda's 4 KB limit."

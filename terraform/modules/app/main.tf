@@ -12,7 +12,6 @@ module "lambda_iam" {
 module "chapter_api" {
   source = "../api"
 
-  aws_region       = var.aws_region
   table_name       = module.chapter_cache.table_name
   table_arn        = module.chapter_cache.table_arn
   lambda_role_arn  = module.lambda_iam.role_arn

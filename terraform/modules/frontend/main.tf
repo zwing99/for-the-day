@@ -127,7 +127,7 @@ resource "aws_cloudfront_cache_policy" "api_disabled" {
       header_behavior = "none"
     }
     query_strings_config {
-      query_string_behavior = "all"
+      query_string_behavior = "none"
     }
   }
 }

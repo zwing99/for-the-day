@@ -41,3 +41,5 @@ Before adding dependencies, check whether the platform, existing code, or hn-tok
 ## Repository safety
 
 Preserve unrelated user changes and keep edits scoped to the active task. Do not perform destructive Git operations unless explicitly requested. Update this file only when experience reveals a useful durable repository-wide rule; keep temporary task details in the relevant OpenSpec change.
+
+When publishing repository changes, push the canonical branch to both the GitLab and GitHub remotes, then verify both pushes succeeded.

@@ -1,0 +1,212 @@
+workflow:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - when: never
+
+stages:
+  - preflight
+  - checks
+  - build
+  - foundation
+  - plan
+  - deploy
+  - verify
+
+.aws-oidc:
+  image:
+    name: amazon/aws-cli:2.27.49
+    entrypoint: [""]
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: sts.amazonaws.com
+  environment:
+    name: beta
+  resource_group: beta-deployment
+  before_script:
+    - |
+      set -eu
+      : "${ROLE_ARN:?Set the protected ROLE_ARN CI/CD variable}"
+      aws_sts_output="$(aws sts assume-role-with-web-identity \
+        --role-arn "$ROLE_ARN" \
+        --role-session-name "GitLabRunner-${CI_PROJECT_ID}-${CI_PIPELINE_ID}" \
+        --web-identity-token "$GITLAB_OIDC_TOKEN" \
+        --duration-seconds 3600 \
+        --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
+        --output text)"
+      set -- $aws_sts_output
+      export AWS_ACCESS_KEY_ID="$1"
+      export AWS_SECRET_ACCESS_KEY="$2"
+      export AWS_SESSION_TOKEN="$3"
+      unset GITLAB_OIDC_TOKEN aws_sts_output
+      export AWS_DEFAULT_REGION=us-east-1
+
+aws-oidc-test:
+  extends: .aws-oidc
+  stage: preflight
+  script:
+    - aws sts get-caller-identity --query '{Account:Account,Arn:Arn}' --output table
+
+unit:
+  image: oven/bun:1.3.12
+  stage: checks
+  script:
+    - bun install --frozen-lockfile
+    - bun x --no-install tsc -p tsconfig.client.json
+    - bun x --no-install tsc -p tsconfig.server.json
+    - bun x --no-install biome lint .
+    - bun x --no-install biome format .
+    - bun x --no-install vitest run tests/unit
+  # DynamoDB Local integration tests remain local-only; CI needs no Docker in Docker.
+
+terraform:validate:
+  image:
+    name: hashicorp/terraform:1.10.5
+    entrypoint: [""]
+  stage: checks
+  script:
+    - terraform fmt -check -recursive terraform
+    - terraform -chdir=terraform/dns init -backend=false -input=false
+    - terraform -chdir=terraform/dns validate
+    - terraform -chdir=terraform init -backend=false -input=false
+    - terraform -chdir=terraform validate
+    - terraform -chdir=terraform/iam init -backend=false -input=false
+    - terraform -chdir=terraform/iam validate
+    - terraform -chdir=terraform/iam plan -refresh=false -input=false -out=/tmp/iam-policy.tfplan
+    - terraform -chdir=terraform/iam show -json /tmp/iam-policy.tfplan > iam-policy-plan.json
+  artifacts:
+    paths:
+      - iam-policy-plan.json
+    expire_in: 1 day
+
+iam:policy-check:
+  image: oven/bun:1.3.12
+  stage: checks
+  needs:
+    - job: terraform:validate
+      artifacts: true
+  script:
+    - bun scripts/verify-iam-policies.mjs < iam-policy-plan.json
+
+build:
+  image: oven/bun:1.3.12
+  stage: build
+  needs:
+    - unit
+    - terraform:validate
+    - iam:policy-check
+  script:
+    - bun install --frozen-lockfile
+    - bun x --no-install vite build
+    - bash scripts/package-lambda.sh
+  artifacts:
+    name: "beta-${CI_COMMIT_SHA}"
+    paths:
+      - dist/
+    expire_in: never
+
+.install-terraform:
+  before_script:
+    - |
+      set -eu
+      dnf install -y curl unzip
+      terraform_version=1.10.5
+      curl --fail --silent --show-error \
+        "https://releases.hashicorp.com/terraform/${terraform_version}/terraform_${terraform_version}_linux_amd64.zip" \
+        -o /tmp/terraform.zip
+      unzip -oq /tmp/terraform.zip -d /usr/local/bin
+      terraform version
+      : "${ROLE_ARN:?Set the protected ROLE_ARN CI/CD variable}"
+      aws_sts_output="$(aws sts assume-role-with-web-identity \
+        --role-arn "$ROLE_ARN" \
+        --role-session-name "GitLabRunner-${CI_PROJECT_ID}-${CI_PIPELINE_ID}" \
+        --web-identity-token "$GITLAB_OIDC_TOKEN" \
+        --duration-seconds 3600 \
+        --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
+        --output text)"
+      set -- $aws_sts_output
+      export AWS_ACCESS_KEY_ID="$1"
+      export AWS_SECRET_ACCESS_KEY="$2"
+      export AWS_SESSION_TOKEN="$3"
+      unset GITLAB_OIDC_TOKEN aws_sts_output
+      export AWS_DEFAULT_REGION=us-east-1
+      export TF_HTTP_USERNAME=gitlab-ci-token
+      export TF_HTTP_PASSWORD="$CI_JOB_TOKEN"
+      export TF_HTTP_LOCK_METHOD=POST
+      export TF_HTTP_UNLOCK_METHOD=DELETE
+      export TF_HTTP_RETRY_WAIT_MIN=5
+      export TF_HTTP_ADDRESS="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}"
+      export TF_HTTP_LOCK_ADDRESS="${TF_HTTP_ADDRESS}/lock"
+      export TF_HTTP_UNLOCK_ADDRESS="${TF_HTTP_ADDRESS}/lock"
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: sts.amazonaws.com
+  variables:
+    TF_STATE_NAME: beta-dns
+  image:
+    name: amazon/aws-cli:2.27.49
+    entrypoint: [""]
+  environment:
+    name: beta
+  resource_group: beta-deployment
+
+dns:apply:
+  extends: .install-terraform
+  stage: foundation
+  when: manual
+  script:
+    - terraform -chdir=terraform/dns init -reconfigure -input=false
+    - terraform -chdir=terraform/dns apply -input=false -auto-approve
+    - terraform -chdir=terraform/dns output name_servers
+
+beta:plan:
+  extends: .install-terraform
+  stage: plan
+  when: manual
+  allow_failure: false
+  needs:
+    - job: build
+      artifacts: true
+  variables:
+    TF_STATE_NAME: beta-app
+    TF_VAR_lambda_zip_path: "$CI_PROJECT_DIR/dist/lambda.zip"
+  script:
+    - terraform -chdir=terraform init -reconfigure -input=false
+    - terraform -chdir=terraform plan -input=false
+
+beta:apply:
+  extends: .install-terraform
+  stage: deploy
+  when: manual
+  allow_failure: false
+  needs:
+    - job: build
+      artifacts: true
+    - job: beta:plan
+      artifacts: false
+  variables:
+    TF_STATE_NAME: beta-app
+    TF_VAR_lambda_zip_path: "$CI_PROJECT_DIR/dist/lambda.zip"
+  script:
+    - terraform -chdir=terraform init -reconfigure -input=false
+    - |
+      if terraform -chdir=terraform output -raw static_bucket >/tmp/beta-static-bucket 2>/dev/null; then
+        export STATIC_BUCKET="$(cat /tmp/beta-static-bucket)"
+        bash scripts/deploy/retain-beta-release.sh
+      fi
+    - terraform -chdir=terraform apply -input=false -auto-approve
+    - export STATIC_BUCKET="$(terraform -chdir=terraform output -raw static_bucket)"
+    - export CLOUDFRONT_DISTRIBUTION_ID="$(terraform -chdir=terraform output -raw cloudfront_distribution_id)"
+    - bash scripts/deploy/retain-beta-release.sh
+    - bash scripts/deploy/publish-beta.sh
+
+beta:verify:
+  image: node:22.16.0-bookworm-slim
+  stage: verify
+  when: on_success
+  needs:
+    - job: build
+      artifacts: true
+    - job: beta:apply
+      artifacts: false
+  script:
+    - node scripts/verify-beta.mjs https://fortheday.beckyandzac.com

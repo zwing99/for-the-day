@@ -1,6 +1,7 @@
 [tools]
 bun = "1.3.12"
-node = "24.21.0"
+node = "22.16.0"
+terraform = "1.10.5"
 
 [tasks.install]
 description = "Install locked JavaScript dependencies"
@@ -147,3 +148,19 @@ run = ["bun build scripts/audit-verse-packing.ts --target=node --packages=extern
 [tasks."audit:webu-packing"]
 description = "Audit rendered packing across all pinned WEBU chapters without provider access (dev:web first)"
 run = ["bun build scripts/audit-verse-packing.ts --target=node --packages=external --outfile=.local/verification/audit-verse-packing.mjs", "node .local/verification/audit-verse-packing.mjs --webu"]
+
+[tasks."terraform:fmt"]
+description = "Format Terraform roots and reusable modules"
+run = "terraform fmt -recursive terraform"
+
+[tasks."terraform:validate"]
+description = "Validate Terraform state roots and rendered IAM policies without provider secrets"
+run = ["terraform -chdir=terraform/dns init -backend=false -input=false", "terraform -chdir=terraform/dns validate", "terraform -chdir=terraform/iam init -backend=false -input=false", "terraform -chdir=terraform/iam validate", "terraform -chdir=terraform/iam plan -refresh=false -input=false -out=/tmp/for-the-day-iam.tfplan", "terraform -chdir=terraform/iam show -json /tmp/for-the-day-iam.tfplan | node scripts/verify-iam-policies.mjs", "terraform -chdir=terraform init -backend=false -input=false", "terraform -chdir=terraform validate"]
+
+[tasks."build:lambda"]
+description = "Build a bundled Node 22 Lambda ZIP"
+run = "bash scripts/package-lambda.sh"
+
+[tasks."verify:beta"]
+description = "Verify public beta DNS/TLS, API health, SPA routes, WEBU JSON, and missing assets without provider requests"
+run = "node scripts/verify-beta.mjs"

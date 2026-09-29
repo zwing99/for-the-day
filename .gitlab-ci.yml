@@ -3,6 +3,12 @@ workflow:
     - if: '$CI_COMMIT_BRANCH == "main"'
     - when: never
 
+image: ghcr.io/jdx/mise:2026.9.11-debian
+
+variables:
+  MISE_DATA_DIR: "$CI_PROJECT_DIR/.mise"
+  MISE_CACHE_DIR: "$CI_PROJECT_DIR/.mise/cache"
+
 stages:
   - checks
   - build
@@ -11,11 +17,7 @@ stages:
   - verify
 
 unit:
-  image: ghcr.io/jdx/mise:2026.9.11-debian
   stage: checks
-  variables:
-    MISE_DATA_DIR: "$CI_PROJECT_DIR/.mise"
-    MISE_CACHE_DIR: "$CI_PROJECT_DIR/.mise/cache"
   cache:
     key:
       prefix: mise-unit-linux-amd64
@@ -34,62 +36,64 @@ unit:
   # DynamoDB Local integration tests remain local-only; CI needs no Docker in Docker.
 
 terraform:validate:
-  image:
-    name: hashicorp/terraform:1.10.5
-    entrypoint: [""]
   stage: checks
   script:
-    - terraform fmt -check -recursive terraform
-    - terraform -chdir=terraform init -backend=false -input=false
-    - terraform -chdir=terraform validate
-    - terraform -chdir=terraform/iam init -backend=false -input=false
-    - terraform -chdir=terraform/iam validate
-    - terraform -chdir=terraform/iam plan -refresh=false -input=false -out=/tmp/iam-policy.tfplan
-    - terraform -chdir=terraform/iam show -json /tmp/iam-policy.tfplan > iam-policy-plan.json
+    - mise install terraform
+    - mise exec -- terraform fmt -check -recursive terraform
+    - mise exec -- terraform -chdir=terraform init -backend=false -input=false
+    - mise exec -- terraform -chdir=terraform validate
+    - mise exec -- terraform -chdir=terraform/iam init -backend=false -input=false
+    - mise exec -- terraform -chdir=terraform/iam validate
+    - mise exec -- terraform -chdir=terraform/iam plan -refresh=false -input=false -out=/tmp/iam-policy.tfplan
+    - mise exec -- terraform -chdir=terraform/iam show -json /tmp/iam-policy.tfplan > iam-policy-plan.json
   artifacts:
     paths:
       - iam-policy-plan.json
     expire_in: 1 day
 
 iam:policy-check:
-  image: oven/bun:1.3.12
   stage: checks
   needs:
     - job: terraform:validate
       artifacts: true
   script:
-    - bun scripts/verify-iam-policies.mjs < iam-policy-plan.json
+    - mise install node
+    - mise exec -- node scripts/verify-iam-policies.mjs < iam-policy-plan.json
 
 build:
-  image: oven/bun:1.3.12
   stage: build
+  cache:
+    key:
+      prefix: mise-build-linux-amd64
+      files:
+        - mise.toml
+    paths:
+      - .mise/installs/
+      - .mise/cache/
   needs:
     - unit
     - terraform:validate
     - iam:policy-check
   script:
-    - bun install --frozen-lockfile
-    - bun x --no-install vite build
-    - bash scripts/package-lambda.sh
+    - mise install node bun
+    - apt-get update && apt-get install -y --no-install-recommends zip && rm -rf /var/lib/apt/lists/*
+    - mise run install
+    - mise exec -- bun x --no-install vite build
+    - mise run build:lambda
   artifacts:
     name: "beta-${CI_COMMIT_SHA}"
     paths:
       - dist/
     expire_in: never
 
-.install-terraform:
+.aws-terraform:
   before_script:
     - |
       set -eu
-      dnf install -y curl unzip
-      terraform_version=1.10.5
-      curl --fail --silent --show-error \
-        "https://releases.hashicorp.com/terraform/${terraform_version}/terraform_${terraform_version}_linux_amd64.zip" \
-        -o /tmp/terraform.zip
-      unzip -oq /tmp/terraform.zip -d /usr/local/bin
-      terraform version
+      mise install terraform aws-cli
+      mise exec -- terraform version
       : "${ROLE_ARN:?Configure ROLE_ARN as a protected CI/CD variable scoped to beta or *}"
-      aws_sts_output="$(aws sts assume-role-with-web-identity \
+      aws_sts_output="$(mise exec -- aws sts assume-role-with-web-identity \
         --role-arn "$ROLE_ARN" \
         --role-session-name "GitLabRunner-${CI_PROJECT_ID}-${CI_PIPELINE_ID}" \
         --web-identity-token "$GITLAB_OIDC_TOKEN" \
@@ -115,15 +119,12 @@ build:
   id_tokens:
     GITLAB_OIDC_TOKEN:
       aud: sts.amazonaws.com
-  image:
-    name: amazon/aws-cli:2.27.49
-    entrypoint: [""]
   environment:
     name: beta
   resource_group: beta-deployment
 
 beta:plan:
-  extends: .install-terraform
+  extends: .aws-terraform
   stage: plan
   when: manual
   allow_failure: false
@@ -144,11 +145,11 @@ beta:plan:
       export TF_VAR_api_bible_nlt_id="$API_BIBLE_NLT_ID"
       export TF_VAR_crossway_key="$CROSSWAY_KEY"
       export TF_VAR_lambda_zip_path="$CI_PROJECT_DIR/dist/lambda.zip"
-    - terraform -chdir="$TF_ROOT" init -reconfigure -input=false
-    - terraform -chdir="$TF_ROOT" plan -input=false
+    - mise exec -- terraform -chdir="$TF_ROOT" init -reconfigure -input=false
+    - mise exec -- terraform -chdir="$TF_ROOT" plan -input=false
 
 beta:apply:
-  extends: .install-terraform
+  extends: .aws-terraform
   stage: deploy
   when: manual
   allow_failure: false
@@ -171,25 +172,24 @@ beta:apply:
       export TF_VAR_api_bible_nlt_id="$API_BIBLE_NLT_ID"
       export TF_VAR_crossway_key="$CROSSWAY_KEY"
       export TF_VAR_lambda_zip_path="$CI_PROJECT_DIR/dist/lambda.zip"
-    - terraform -chdir="$TF_ROOT" init -reconfigure -input=false
+    - mise exec -- terraform -chdir="$TF_ROOT" init -reconfigure -input=false
     - |
-      if terraform -chdir="$TF_ROOT" output -raw static_bucket >/tmp/beta-static-bucket 2>/dev/null; then
+      if mise exec -- terraform -chdir="$TF_ROOT" output -raw static_bucket >/tmp/beta-static-bucket 2>/dev/null; then
         export STATIC_BUCKET="$(cat /tmp/beta-static-bucket)"
         bash scripts/deploy/retain-beta-release.sh
       fi
-    - terraform -chdir="$TF_ROOT" apply -input=false -auto-approve
+    - mise exec -- terraform -chdir="$TF_ROOT" apply -input=false -auto-approve
     - |
-      if terraform -chdir="$TF_ROOT" output -raw static_bucket >/tmp/beta-static-bucket 2>/dev/null; then
-        export STATIC_BUCKET="$(terraform -chdir="$TF_ROOT" output -raw static_bucket)"
-        export CLOUDFRONT_DISTRIBUTION_ID="$(terraform -chdir="$TF_ROOT" output -raw cloudfront_distribution_id)"
+      if mise exec -- terraform -chdir="$TF_ROOT" output -raw static_bucket >/tmp/beta-static-bucket 2>/dev/null; then
+        export STATIC_BUCKET="$(mise exec -- terraform -chdir="$TF_ROOT" output -raw static_bucket)"
+        export CLOUDFRONT_DISTRIBUTION_ID="$(mise exec -- terraform -chdir="$TF_ROOT" output -raw cloudfront_distribution_id)"
         bash scripts/deploy/retain-beta-release.sh
         bash scripts/deploy/publish-beta.sh
       else
-        terraform -chdir="$TF_ROOT" output name_servers
+        mise exec -- terraform -chdir="$TF_ROOT" output name_servers
       fi
 
 beta:verify:
-  image: node:22.16.0-bookworm-slim
   stage: verify
   when: manual
   needs:
@@ -198,4 +198,5 @@ beta:verify:
     - job: beta:apply
       artifacts: false
   script:
-    - node scripts/verify-beta.mjs https://fortheday.beckyandzac.com
+    - mise install node
+    - mise exec -- node scripts/verify-beta.mjs https://fortheday.beckyandzac.com

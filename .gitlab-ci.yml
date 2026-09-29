@@ -170,13 +170,13 @@ beta:apply:
       export TF_VAR_lambda_zip_path="$CI_PROJECT_DIR/dist/lambda.zip"
     - mise exec -- terraform -chdir="$TF_ROOT" init -reconfigure -input=false
     - |
-      if mise exec -- terraform -chdir="$TF_ROOT" output -raw static_bucket >/tmp/beta-static-bucket 2>/dev/null; then
+      if mise exec -- terraform -chdir="$TF_ROOT" output -raw static_bucket >/tmp/beta-static-bucket 2>/dev/null && [ -s /tmp/beta-static-bucket ]; then
         export STATIC_BUCKET="$(cat /tmp/beta-static-bucket)"
         bash scripts/deploy/retain-beta-release.sh
       fi
     - mise exec -- terraform -chdir="$TF_ROOT" apply -input=false -auto-approve
     - |
-      if mise exec -- terraform -chdir="$TF_ROOT" output -raw static_bucket >/tmp/beta-static-bucket 2>/dev/null; then
+      if mise exec -- terraform -chdir="$TF_ROOT" output -raw static_bucket >/tmp/beta-static-bucket 2>/dev/null && [ -s /tmp/beta-static-bucket ]; then
         export STATIC_BUCKET="$(mise exec -- terraform -chdir="$TF_ROOT" output -raw static_bucket)"
         export CLOUDFRONT_DISTRIBUTION_ID="$(mise exec -- terraform -chdir="$TF_ROOT" output -raw cloudfront_distribution_id)"
         bash scripts/deploy/retain-beta-release.sh

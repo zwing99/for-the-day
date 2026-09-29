@@ -5,7 +5,7 @@ variable "aws_region" {
 }
 variable "zone_name" {
   type        = string
-  description = "Delegated beta zone created by terraform/dns."
+  description = "Public delegated beta zone managed by the DNS module in this root."
   default     = "fortheday.beckyandzac.com"
 }
 variable "lambda_zip_path" {
@@ -34,20 +34,18 @@ variable "crossway_key" {
   sensitive = true
 }
 
-// First deployment: create the dedicated hosted zone, then add its name
-// servers to the parent zone. Uncomment module "app" after delegation resolves.
-// module "app" {
-//   source = "./modules/app"
-//
-//   aws_region       = var.aws_region
-//   zone_name        = var.zone_name
-//   lambda_zip_path  = abspath("${path.root}/${var.lambda_zip_path}")
-//   api_bible_key    = var.api_bible_key
-//   api_bible_csb_id = var.api_bible_csb_id
-//   api_bible_niv_id = var.api_bible_niv_id
-//   api_bible_nlt_id = var.api_bible_nlt_id
-//   crossway_key     = var.crossway_key
-// }
+module "app" {
+  source = "./modules/app"
+
+  aws_region       = var.aws_region
+  zone_name        = var.zone_name
+  lambda_zip_path  = abspath("${path.root}/${var.lambda_zip_path}")
+  api_bible_key    = var.api_bible_key
+  api_bible_csb_id = var.api_bible_csb_id
+  api_bible_niv_id = var.api_bible_niv_id
+  api_bible_nlt_id = var.api_bible_nlt_id
+  crossway_key     = var.crossway_key
+}
 
 module "dns" {
   source = "./modules/dns"

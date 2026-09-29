@@ -172,15 +172,15 @@ beta:apply:
     - |
       if mise exec -- terraform -chdir="$TF_ROOT" output -raw static_bucket >/tmp/beta-static-bucket 2>/dev/null && [ -s /tmp/beta-static-bucket ]; then
         export STATIC_BUCKET="$(cat /tmp/beta-static-bucket)"
-        bash scripts/deploy/retain-beta-release.sh
+        mise exec -- bash scripts/deploy/retain-beta-release.sh
       fi
     - mise exec -- terraform -chdir="$TF_ROOT" apply -input=false -auto-approve
     - |
       if mise exec -- terraform -chdir="$TF_ROOT" output -raw static_bucket >/tmp/beta-static-bucket 2>/dev/null && [ -s /tmp/beta-static-bucket ]; then
         export STATIC_BUCKET="$(mise exec -- terraform -chdir="$TF_ROOT" output -raw static_bucket)"
         export CLOUDFRONT_DISTRIBUTION_ID="$(mise exec -- terraform -chdir="$TF_ROOT" output -raw cloudfront_distribution_id)"
-        bash scripts/deploy/retain-beta-release.sh
-        bash scripts/deploy/publish-beta.sh
+        mise exec -- bash scripts/deploy/retain-beta-release.sh
+        mise exec -- bash scripts/deploy/publish-beta.sh
       else
         mise exec -- terraform -chdir="$TF_ROOT" output name_servers
       fi

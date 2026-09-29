@@ -8,6 +8,7 @@ image: ghcr.io/jdx/mise:2026.9.11-debian
 variables:
   MISE_DATA_DIR: "$CI_PROJECT_DIR/.mise"
   MISE_CACHE_DIR: "$CI_PROJECT_DIR/.mise/cache"
+  AWS_CLI_VERSION: "2.27.49"
 
 stages:
   - checks
@@ -90,10 +91,27 @@ build:
   before_script:
     - |
       set -eu
-      mise install terraform aws-cli
+      apt-get update
+      apt-get install -y --no-install-recommends curl unzip
+      rm -rf /var/lib/apt/lists/*
+      aws_cli_os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+      aws_cli_machine="$(uname -m)"
+      case "${aws_cli_os}/${aws_cli_machine}" in
+        linux/x86_64) aws_cli_arch=x86_64 ;;
+        linux/aarch64|linux/arm64) aws_cli_arch=aarch64 ;;
+        *) echo "Unsupported AWS CLI platform: ${aws_cli_os}/${aws_cli_machine}" >&2; exit 1 ;;
+      esac
+      aws_cli_archive="awscli-exe-${aws_cli_os}-${aws_cli_arch}-${AWS_CLI_VERSION}.zip"
+      curl --fail --location --silent --show-error "https://awscli.amazonaws.com/${aws_cli_archive}" --output "/tmp/${aws_cli_archive}"
+      mkdir -p /tmp/aws-cli-install
+      unzip -q "/tmp/${aws_cli_archive}" -d /tmp/aws-cli-install
+      /tmp/aws-cli-install/aws/install --install-dir /usr/local/aws-cli --bin-dir /usr/local/bin --update
+      rm -rf /tmp/aws-cli-install "/tmp/${aws_cli_archive}"
+      aws --version
+      mise install terraform
       mise exec -- terraform version
       : "${ROLE_ARN:?Configure ROLE_ARN as a protected CI/CD variable scoped to beta or *}"
-      aws_sts_output="$(mise exec -- aws sts assume-role-with-web-identity \
+      aws_sts_output="$(aws sts assume-role-with-web-identity \
         --role-arn "$ROLE_ARN" \
         --role-session-name "GitLabRunner-${CI_PROJECT_ID}-${CI_PIPELINE_ID}" \
         --web-identity-token "$GITLAB_OIDC_TOKEN" \
@@ -172,15 +190,15 @@ beta:apply:
     - |
       if mise exec -- terraform -chdir="$TF_ROOT" output -raw static_bucket >/tmp/beta-static-bucket 2>/dev/null && [ -s /tmp/beta-static-bucket ]; then
         export STATIC_BUCKET="$(cat /tmp/beta-static-bucket)"
-        mise exec -- bash scripts/deploy/retain-beta-release.sh
+        bash scripts/deploy/retain-beta-release.sh
       fi
     - mise exec -- terraform -chdir="$TF_ROOT" apply -input=false -auto-approve
     - |
       if mise exec -- terraform -chdir="$TF_ROOT" output -raw static_bucket >/tmp/beta-static-bucket 2>/dev/null && [ -s /tmp/beta-static-bucket ]; then
         export STATIC_BUCKET="$(mise exec -- terraform -chdir="$TF_ROOT" output -raw static_bucket)"
         export CLOUDFRONT_DISTRIBUTION_ID="$(mise exec -- terraform -chdir="$TF_ROOT" output -raw cloudfront_distribution_id)"
-        mise exec -- bash scripts/deploy/retain-beta-release.sh
-        mise exec -- bash scripts/deploy/publish-beta.sh
+        bash scripts/deploy/retain-beta-release.sh
+        bash scripts/deploy/publish-beta.sh
       else
         mise exec -- terraform -chdir="$TF_ROOT" output name_servers
       fi

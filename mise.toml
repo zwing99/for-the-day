@@ -21,7 +21,7 @@ run = "bun --watch src/server/listener.ts"
 
 [tasks.test]
 description = "Run Docker-independent unit tests"
-run = "bun x --no-install vitest run tests/unit"
+run = "node node_modules/vitest/vitest.mjs run tests/unit --pool=threads --maxWorkers=2"
 
 [tasks.build]
 description = "Build browser assets and Node-compatible API"

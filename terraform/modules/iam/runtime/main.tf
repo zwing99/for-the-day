@@ -17,7 +17,12 @@ resource "aws_iam_role" "lambda" {
 
 data "aws_iam_policy_document" "lambda_runtime" {
   statement {
-    actions   = ["dynamodb:GetItem", "dynamodb:TransactWriteItems"]
+    actions = [
+      "dynamodb:DeleteItem",
+      "dynamodb:GetItem",
+      "dynamodb:PutItem",
+      "dynamodb:TransactWriteItems",
+    ]
     resources = [var.table_arn]
   }
   statement {

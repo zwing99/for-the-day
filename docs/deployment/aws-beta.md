@@ -44,6 +44,19 @@ The app configuration in `terraform/main.tf` composes `modules/app`, which wires
 
 The Terraform roots preserve the hosted zone, S3 bucket, and DynamoDB table from accidental destroy. The static bucket blocks public access and is readable through CloudFront OAC. S3 versioning retains prior object versions. CloudFront sends `/api` and `/api/*` to API Gateway with caching disabled and forwards query strings; API errors stay under the Hono error contract. Missing objects in the private S3 origin may return 403, which is still a missing response and cannot return the SPA shell.
 
+## Verified deployment
+
+On 2026-09-29, GitLab pipeline [2891918475](https://gitlab.com/zwing99/for-the-day/-/pipelines/2891918475) passed for commit `dca9f8913d1118370464c18158a96f398791c05c`. The deployed outputs were:
+
+| Output | Value |
+| --- | --- |
+| CloudFront distribution | `E3E6AWU8C23UVT` (`d2fdlyupf6qm70.cloudfront.net`) |
+| API Gateway | `https://okyvjrbsi3.execute-api.us-east-1.amazonaws.com` |
+| Static bucket | `for-the-day-beta-static-716853106749` |
+| Lambda | `for-the-day-beta-api` |
+
+`mise run verify:beta -- https://fortheday.beckyandzac.com` passed DNS resolution and HTTPS checks for the root shell, direct reader link, `/api/health`, the JavaScript bundle, versioned WEBU JSON, and a missing asset. It made no licensed-provider requests. The Lambda cache role was also updated with the transaction item permissions required by its DynamoDB writes and deletes; Terraform now manages those same permissions.
+
 ## Tests and local checks
 
 CI runs `tests/unit` without Docker. DynamoDB Local integration tests in `tests/integration` remain a local-only TODO until a non-Docker CI strategy is chosen; CI does not use Docker in Docker. Terraform validation initializes providers with backend access disabled and requires no AWS credentials or provider variables.

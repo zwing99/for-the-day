@@ -142,7 +142,7 @@ beta:plan:
       export TF_VAR_api_bible_niv_id="$API_BIBLE_NIV_ID"
       export TF_VAR_api_bible_nlt_id="$API_BIBLE_NLT_ID"
       export TF_VAR_crossway_key="$CROSSWAY_KEY"
-      export TF_VAR_lambda_zip_path="$CI_PROJECT_DIR/dist/lambda.zip"
+      export TF_VAR_lambda_zip_path="../dist/lambda.zip"
     - mise exec -- terraform -chdir="$TF_ROOT" init -reconfigure -input=false
     - mise exec -- terraform -chdir="$TF_ROOT" plan -input=false
 
@@ -167,7 +167,7 @@ beta:apply:
       export TF_VAR_api_bible_niv_id="$API_BIBLE_NIV_ID"
       export TF_VAR_api_bible_nlt_id="$API_BIBLE_NLT_ID"
       export TF_VAR_crossway_key="$CROSSWAY_KEY"
-      export TF_VAR_lambda_zip_path="$CI_PROJECT_DIR/dist/lambda.zip"
+      export TF_VAR_lambda_zip_path="../dist/lambda.zip"
     - mise exec -- terraform -chdir="$TF_ROOT" init -reconfigure -input=false
     - |
       if mise exec -- terraform -chdir="$TF_ROOT" output -raw static_bucket >/tmp/beta-static-bucket 2>/dev/null && [ -s /tmp/beta-static-bucket ]; then

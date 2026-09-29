@@ -55,7 +55,7 @@ unit:
     - bun x --no-install tsc -p tsconfig.server.json
     - bun x --no-install biome lint .
     - bun x --no-install biome format .
-    - bun x --no-install vitest run tests/unit
+    - bun x --no-install vitest run tests/unit --maxWorkers=2
   # DynamoDB Local integration tests remain local-only; CI needs no Docker in Docker.
 
 terraform:validate:

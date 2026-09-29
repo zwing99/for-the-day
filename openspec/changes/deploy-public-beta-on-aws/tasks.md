@@ -9,12 +9,12 @@
 
 ## 2. AWS foundation and routing
 
-- [x] 2.1 Add pinned Terraform providers, variables, outputs, the top-level `terraform/main.tf` app root composed from reusable modules, and separate GitLab HTTP backend configurations for the `beta-dns` and `beta-app` states in `us-east-1`; keep the DNS root separate and render the external deploy-role policies through Terraform IAM policy documents without creating that role. Verify `terraform fmt`, both state roots, and policy contents through a discoverable mise task without provider secrets.
-- [ ] 2.2 Provision the dedicated public hosted zone in the DNS root and output its four name servers; verify its apply can complete before parent delegation or certificate issuance.
+- [x] 2.1 Add pinned Terraform providers, variables, outputs, the top-level `terraform/main.tf` root composed from reusable modules, and a GitLab HTTP backend for state `beta-app` in `us-east-1`; keep only `modules/dns` enabled for the first apply and render the external deploy-role policies through Terraform IAM policy documents without creating that role. Verify `terraform fmt`, the deployment root, and policy contents through a discoverable mise task without provider secrets.
+- [ ] 2.2 Provision the dedicated public hosted zone from the `modules/dns` block in `terraform/main.tf` and output its four name servers; verify its apply can complete before parent delegation or certificate issuance.
 - [ ] 2.3 Provision DNS-validated ACM certificate, CloudFront A/AAAA records, private versioned S3 bucket, and OAC policy in the app root; verify plans show no public bucket access and identify the delegated zone.
 - [x] 2.4 Implement and exercise the CloudFront SPA viewer-request function for `/`, day routes, and passage/verse routes, rewriting each to the root `/index.html` while leaving WEBU JSON, hashed assets, icons, manifest, and unknown file requests intact; verify focused route cases against the built SPA paths and query strings.
 - [ ] 2.5 Add the API Gateway HTTP API, Lambda integration and execution role, DynamoDB table/TTL, separate CloudFront `/api` and `/api/*` behaviors with disabled caching, query forwarding, and safe gateway throttles; verify Terraform plan and mocked gateway event tests keep both API paths out of the SPA and preserve reading context.
-- [x] 2.6 Document initialization of both GitLab-managed states using CI job token HTTP backend and lock endpoints, DNS-root apply, hosted-zone delegation, certificate wait, app-root plan/apply order, and protected-resource handling; verify a fresh operator can identify every state and DNS action from outputs.
+- [x] 2.6 Document initialization of the GitLab-managed state using CI job token HTTP backend and lock endpoints, first apply with only the DNS module enabled, hosted-zone delegation, then uncommenting the app module and using the same plan/apply jobs; verify a fresh operator can identify every state and DNS action from outputs.
 
 ## 3. Credentials and deploy identity
 

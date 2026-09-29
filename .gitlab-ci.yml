@@ -7,7 +7,6 @@ stages:
   - preflight
   - checks
   - build
-  - foundation
   - plan
   - deploy
   - verify
@@ -55,7 +54,7 @@ unit:
     - bun x --no-install tsc -p tsconfig.server.json
     - bun x --no-install biome lint .
     - bun x --no-install biome format .
-    - bun x --no-install vitest run tests/unit --maxWorkers=2
+    - bun x --no-install vitest run tests/unit --pool=threads --maxWorkers=2
   # DynamoDB Local integration tests remain local-only; CI needs no Docker in Docker.
 
 terraform:validate:
@@ -65,8 +64,6 @@ terraform:validate:
   stage: checks
   script:
     - terraform fmt -check -recursive terraform
-    - terraform -chdir=terraform/dns init -backend=false -input=false
-    - terraform -chdir=terraform/dns validate
     - terraform -chdir=terraform init -backend=false -input=false
     - terraform -chdir=terraform validate
     - terraform -chdir=terraform/iam init -backend=false -input=false
@@ -129,6 +126,8 @@ build:
       export AWS_SESSION_TOKEN="$3"
       unset GITLAB_OIDC_TOKEN aws_sts_output
       export AWS_DEFAULT_REGION=us-east-1
+      export TF_ROOT=terraform
+      export TF_STATE_NAME=beta-app
       export TF_HTTP_USERNAME=gitlab-ci-token
       export TF_HTTP_PASSWORD="$CI_JOB_TOKEN"
       export TF_HTTP_LOCK_METHOD=POST
@@ -140,23 +139,12 @@ build:
   id_tokens:
     GITLAB_OIDC_TOKEN:
       aud: sts.amazonaws.com
-  variables:
-    TF_STATE_NAME: beta-dns
   image:
     name: amazon/aws-cli:2.27.49
     entrypoint: [""]
   environment:
     name: beta
   resource_group: beta-deployment
-
-dns:apply:
-  extends: .install-terraform
-  stage: foundation
-  when: manual
-  script:
-    - terraform -chdir=terraform/dns init -reconfigure -input=false
-    - terraform -chdir=terraform/dns apply -input=false -auto-approve
-    - terraform -chdir=terraform/dns output name_servers
 
 beta:plan:
   extends: .install-terraform
@@ -166,9 +154,6 @@ beta:plan:
   needs:
     - job: build
       artifacts: true
-  variables:
-    TF_STATE_NAME: beta-app
-    TF_VAR_lambda_zip_path: "$CI_PROJECT_DIR/dist/lambda.zip"
   script:
     - |
       set -eu
@@ -182,8 +167,9 @@ beta:plan:
       export TF_VAR_api_bible_niv_id="$API_BIBLE_NIV_ID"
       export TF_VAR_api_bible_nlt_id="$API_BIBLE_NLT_ID"
       export TF_VAR_crossway_key="$CROSSWAY_KEY"
-    - terraform -chdir=terraform init -reconfigure -input=false
-    - terraform -chdir=terraform plan -input=false
+      export TF_VAR_lambda_zip_path="$CI_PROJECT_DIR/dist/lambda.zip"
+    - terraform -chdir="$TF_ROOT" init -reconfigure -input=false
+    - terraform -chdir="$TF_ROOT" plan -input=false
 
 beta:apply:
   extends: .install-terraform
@@ -195,9 +181,6 @@ beta:apply:
       artifacts: true
     - job: beta:plan
       artifacts: false
-  variables:
-    TF_STATE_NAME: beta-app
-    TF_VAR_lambda_zip_path: "$CI_PROJECT_DIR/dist/lambda.zip"
   script:
     - |
       set -eu
@@ -211,22 +194,28 @@ beta:apply:
       export TF_VAR_api_bible_niv_id="$API_BIBLE_NIV_ID"
       export TF_VAR_api_bible_nlt_id="$API_BIBLE_NLT_ID"
       export TF_VAR_crossway_key="$CROSSWAY_KEY"
-    - terraform -chdir=terraform init -reconfigure -input=false
+      export TF_VAR_lambda_zip_path="$CI_PROJECT_DIR/dist/lambda.zip"
+    - terraform -chdir="$TF_ROOT" init -reconfigure -input=false
     - |
-      if terraform -chdir=terraform output -raw static_bucket >/tmp/beta-static-bucket 2>/dev/null; then
+      if terraform -chdir="$TF_ROOT" output -raw static_bucket >/tmp/beta-static-bucket 2>/dev/null; then
         export STATIC_BUCKET="$(cat /tmp/beta-static-bucket)"
         bash scripts/deploy/retain-beta-release.sh
       fi
-    - terraform -chdir=terraform apply -input=false -auto-approve
-    - export STATIC_BUCKET="$(terraform -chdir=terraform output -raw static_bucket)"
-    - export CLOUDFRONT_DISTRIBUTION_ID="$(terraform -chdir=terraform output -raw cloudfront_distribution_id)"
-    - bash scripts/deploy/retain-beta-release.sh
-    - bash scripts/deploy/publish-beta.sh
+    - terraform -chdir="$TF_ROOT" apply -input=false -auto-approve
+    - |
+      if terraform -chdir="$TF_ROOT" output -raw static_bucket >/tmp/beta-static-bucket 2>/dev/null; then
+        export STATIC_BUCKET="$(terraform -chdir="$TF_ROOT" output -raw static_bucket)"
+        export CLOUDFRONT_DISTRIBUTION_ID="$(terraform -chdir="$TF_ROOT" output -raw cloudfront_distribution_id)"
+        bash scripts/deploy/retain-beta-release.sh
+        bash scripts/deploy/publish-beta.sh
+      else
+        terraform -chdir="$TF_ROOT" output name_servers
+      fi
 
 beta:verify:
   image: node:22.16.0-bookworm-slim
   stage: verify
-  when: on_success
+  when: manual
   needs:
     - job: build
       artifacts: true

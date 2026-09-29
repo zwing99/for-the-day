@@ -25,7 +25,7 @@ stages:
   before_script:
     - |
       set -eu
-      : "${ROLE_ARN:?Set the protected ROLE_ARN CI/CD variable}"
+      : "${ROLE_ARN:?Configure ROLE_ARN as a protected CI/CD variable scoped to beta or *}"
       aws_sts_output="$(aws sts assume-role-with-web-identity \
         --role-arn "$ROLE_ARN" \
         --role-session-name "GitLabRunner-${CI_PROJECT_ID}-${CI_PIPELINE_ID}" \
@@ -115,7 +115,7 @@ build:
         -o /tmp/terraform.zip
       unzip -oq /tmp/terraform.zip -d /usr/local/bin
       terraform version
-      : "${ROLE_ARN:?Set the protected ROLE_ARN CI/CD variable}"
+      : "${ROLE_ARN:?Configure ROLE_ARN as a protected CI/CD variable scoped to beta or *}"
       aws_sts_output="$(aws sts assume-role-with-web-identity \
         --role-arn "$ROLE_ARN" \
         --role-session-name "GitLabRunner-${CI_PROJECT_ID}-${CI_PIPELINE_ID}" \
@@ -170,6 +170,18 @@ beta:plan:
     TF_STATE_NAME: beta-app
     TF_VAR_lambda_zip_path: "$CI_PROJECT_DIR/dist/lambda.zip"
   script:
+    - |
+      set -eu
+      : "${API_BIBLE_KEY:?Set API_BIBLE_KEY as a protected CI/CD variable}"
+      : "${API_BIBLE_CSB_ID:?Set API_BIBLE_CSB_ID as a protected CI/CD variable}"
+      : "${API_BIBLE_NIV_ID:?Set API_BIBLE_NIV_ID as a protected CI/CD variable}"
+      : "${API_BIBLE_NLT_ID:?Set API_BIBLE_NLT_ID as a protected CI/CD variable}"
+      : "${CROSSWAY_KEY:?Set CROSSWAY_KEY as a protected CI/CD variable}"
+      export TF_VAR_api_bible_key="$API_BIBLE_KEY"
+      export TF_VAR_api_bible_csb_id="$API_BIBLE_CSB_ID"
+      export TF_VAR_api_bible_niv_id="$API_BIBLE_NIV_ID"
+      export TF_VAR_api_bible_nlt_id="$API_BIBLE_NLT_ID"
+      export TF_VAR_crossway_key="$CROSSWAY_KEY"
     - terraform -chdir=terraform init -reconfigure -input=false
     - terraform -chdir=terraform plan -input=false
 
@@ -187,6 +199,18 @@ beta:apply:
     TF_STATE_NAME: beta-app
     TF_VAR_lambda_zip_path: "$CI_PROJECT_DIR/dist/lambda.zip"
   script:
+    - |
+      set -eu
+      : "${API_BIBLE_KEY:?Set API_BIBLE_KEY as a protected CI/CD variable}"
+      : "${API_BIBLE_CSB_ID:?Set API_BIBLE_CSB_ID as a protected CI/CD variable}"
+      : "${API_BIBLE_NIV_ID:?Set API_BIBLE_NIV_ID as a protected CI/CD variable}"
+      : "${API_BIBLE_NLT_ID:?Set API_BIBLE_NLT_ID as a protected CI/CD variable}"
+      : "${CROSSWAY_KEY:?Set CROSSWAY_KEY as a protected CI/CD variable}"
+      export TF_VAR_api_bible_key="$API_BIBLE_KEY"
+      export TF_VAR_api_bible_csb_id="$API_BIBLE_CSB_ID"
+      export TF_VAR_api_bible_niv_id="$API_BIBLE_NIV_ID"
+      export TF_VAR_api_bible_nlt_id="$API_BIBLE_NLT_ID"
+      export TF_VAR_crossway_key="$CROSSWAY_KEY"
     - terraform -chdir=terraform init -reconfigure -input=false
     - |
       if terraform -chdir=terraform output -raw static_bucket >/tmp/beta-static-bucket 2>/dev/null; then

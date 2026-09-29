@@ -15,18 +15,18 @@ The project is `zwing99/for-the-day`, project ID `87006951`, namespace ID `44550
 
 The GitLab.com IAM OIDC provider and deployment role are already created. The top-level app root at `terraform/` composes `modules/app`, which wires the cache, Lambda IAM, API, and frontend modules; the independent `terraform/dns` root calls `modules/dns`. The `terraform/iam` root calls the policy module and renders trust and permission documents using AWS provider `aws_iam_policy_document` data sources; it does not create or update the external role. It restricts trust to this project, namespace, `main`, and audience `sts.amazonaws.com`. It grants the deployment role access to named beta resources where AWS supports resource-level permissions and does not grant parent-zone access. Render and review the policies before attaching them: `terraform -chdir=terraform/iam init -backend=false`, `terraform -chdir=terraform/iam plan -refresh=false -out=/tmp/beta-iam.tfplan`, and `terraform -chdir=terraform/iam show -json /tmp/beta-iam.tfplan | node scripts/verify-iam-policies.mjs`.
 
-Add these GitLab CI/CD variables with **Protected**, **Masked**, **Hidden**, and environment scope **beta**:
+The project already has the five provider variables below. Keep them **Protected** and scoped to `beta` or `*`; mask and hide the two secret keys. The beta Terraform jobs map these names to Terraform's `TF_VAR_*` inputs without printing their values. Add `ROLE_ARN` as a protected variable scoped to `beta` or `*`:
 
 | Variable | Value |
 | --- | --- |
-| `ROLE_ARN` | ARN of the externally managed deployment role |
-| `TF_VAR_api_bible_key` | API.Bible key for CSB, NIV, and NLT |
-| `TF_VAR_api_bible_csb_id` | API.Bible CSB edition ID |
-| `TF_VAR_api_bible_niv_id` | API.Bible NIV edition ID |
-| `TF_VAR_api_bible_nlt_id` | API.Bible NLT edition ID |
-| `TF_VAR_crossway_key` | Crossway ESV key |
+| `ROLE_ARN` | `arn:aws:iam::716853106749:role/gitlab-fortheday-deploy-role` |
+| `API_BIBLE_KEY` | API.Bible key for CSB, NIV, and NLT |
+| `API_BIBLE_CSB_ID` | API.Bible CSB edition ID |
+| `API_BIBLE_NIV_ID` | API.Bible NIV edition ID |
+| `API_BIBLE_NLT_ID` | API.Bible NLT edition ID |
+| `CROSSWAY_KEY` | Crossway ESV key |
 
-The role ARN is an identifier rather than a secret, but protect it with the same environment and branch restrictions. Use the CI/CD variable editor to confirm variable presence; do not print values in a job. Keep GitLab pipeline debug tracing disabled.
+The role ARN is an identifier rather than a secret, but protect it with the same environment and branch restrictions. Confirm variable presence with `glab variable list`; it reports names and scope but does not display values. Keep GitLab pipeline debug tracing disabled.
 
 The `aws-oidc-test` job runs on protected `main` pipelines before deployment. It exchanges the GitLab ID token for temporary AWS credentials and prints only the caller account and role ARN. If it fails, compare the role's provider ARN, audience, project and namespace IDs, and `sub` branch condition before investigating later deployment jobs.
 

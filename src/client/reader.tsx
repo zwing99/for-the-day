@@ -111,7 +111,11 @@ export function Reader({
 	const stage = useRef<HTMLDivElement>(null);
 	const menuTrigger = useRef<HTMLButtonElement>(null);
 	const actions = useRef<ReadingActions>(null);
+	const previewActions = useRef<ReadingActions>(null);
 	const [visibleLocation, setVisibleLocation] = useState<string>();
+	const [activeLayoutUnavailable, setActiveLayoutUnavailable] = useState(false);
+	const [previewLayoutUnavailable, setPreviewLayoutUnavailable] =
+		useState(false);
 	function updatePreferences(next: Preferences) {
 		repository.setPreferences(next);
 		setPreferences(next);
@@ -431,6 +435,17 @@ export function Reader({
 		return () => clearTimeout(timer);
 	}, [error]);
 	function record(next: ReaderRoute) {
+		const previous = current.current;
+		if (
+			previous?.day === next.day &&
+			previous.book === next.book &&
+			previous.chapter === next.chapter &&
+			previous.translation === next.translation &&
+			previous.location === next.location &&
+			JSON.stringify(previous.orgIds ?? []) ===
+				JSON.stringify(next.orgIds ?? [])
+		)
+			return;
 		setVisibleLocation(next.location);
 		current.current = next;
 		repository.savePosition(next);
@@ -492,6 +507,7 @@ export function Reader({
 	}, []);
 	const previewPresentationKey = `${previewKey}:${preferences.density}:${preferences.fontSize}:${previewLayoutRevision}`;
 	useEffect(() => setPreviewReady(undefined), [previewPresentationKey]);
+	useEffect(() => setPreviewLayoutUnavailable(false), [previewPresentationKey]);
 	useEffect(() => {
 		if (!previewRoute || !previewKey) return;
 		const controller = new AbortController();
@@ -534,6 +550,13 @@ export function Reader({
 			/* An invalid saved anchor leaves the preview unavailable. */
 		}
 	}
+	const previewHandoffReady =
+		!!handoff &&
+		previewKey === identity(handoff.route) &&
+		!!previewChapter &&
+		!!previewLocation &&
+		previewReady === previewPresentationKey;
+	const previewRetryAvailable = !!handoff && previewLayoutUnavailable;
 	const passageName = route
 		? `${route.book === "PSA" ? "Psalm" : "Proverbs"} ${route.chapter}`
 		: "Reading link";
@@ -647,7 +670,7 @@ export function Reader({
 				ref={stage}
 				className="passage-stage"
 				data-transition={drag.phase}
-				data-handoff={handoff ? "ready" : undefined}
+				data-handoff={previewHandoffReady ? "ready" : undefined}
 			>
 				<main
 					className="reading-scroll"
@@ -717,9 +740,11 @@ export function Reader({
 							<ReadingSurface
 								key={key}
 								actions={actions}
+								onLayoutUnavailable={setActiveLayoutUnavailable}
 								chapter={chapter}
 								density={preferences.density}
 								fontSize={preferences.fontSize}
+								deferFocus={!!handoff}
 								restoreId={navigation.id}
 								targetKey={intro ? "intro" : routeVerse(chapter, location)?.key}
 								intro={
@@ -769,11 +794,23 @@ export function Reader({
 						</>
 					)}
 				</main>
+				{activeLayoutUnavailable && !previewHandoffReady && (
+					<section
+						className="reading-layout-fallback"
+						role="status"
+						aria-label={`${passageName} layout recovery`}
+					>
+						<p>Still preparing this page.</p>
+						<button onClick={() => actions.current?.retryLayout()}>
+							Retry page layout
+						</button>
+					</section>
+				)}
 				{previewRoute && (drag.phase !== "idle" || handoff) && (
 					<main
 						className="passage-preview reading-scroll"
-						inert
-						aria-hidden="true"
+						inert={!previewHandoffReady && !previewRetryAvailable}
+						aria-hidden={!previewHandoffReady && !previewRetryAvailable}
 						style={{
 							transform: handoff
 								? "translateX(0)"
@@ -798,6 +835,11 @@ export function Reader({
 								{previewRoute.chapter}
 							</h2>
 							<p>Loading Scripture…</p>
+							{previewLayoutUnavailable && handoff && (
+								<button onClick={() => previewActions.current?.retryLayout()}>
+									Retry page layout
+								</button>
+							)}
 						</div>
 						{previewChapter && previewLocation && (
 							<div
@@ -811,6 +853,7 @@ export function Reader({
 							>
 								<ReadingSurface
 									key={previewKey}
+									actions={previewActions}
 									chapter={previewChapter}
 									passive
 									density={preferences.density}
@@ -831,6 +874,7 @@ export function Reader({
 									}
 									onReady={() => setPreviewReady(previewPresentationKey)}
 									onPreparing={() => setPreviewReady(undefined)}
+									onLayoutUnavailable={setPreviewLayoutUnavailable}
 								/>
 								<Attribution chapter={previewChapter} />
 							</div>

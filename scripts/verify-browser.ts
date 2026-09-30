@@ -113,6 +113,40 @@ for (const [name, engine] of [
 			}
 		}
 		if (name === "Chromium") {
+			checkpoint = "text selection through zoom-like remeasurement";
+			await page.goto(`${origin}/23/psalm/23/2?translation=CSB`);
+			await settledReader(page);
+			const selectedLength = await page.evaluate(() => {
+				const text = document.querySelector<HTMLElement>(
+					"[data-semantic-text]",
+				)?.firstChild;
+				if (!text || text.nodeType !== Node.TEXT_NODE) return 0;
+				const range = document.createRange();
+				range.setStart(text, 0);
+				range.setEnd(text, Math.min(12, text.textContent?.length ?? 0));
+				const selection = window.getSelection();
+				selection?.removeAllRanges();
+				selection?.addRange(range);
+				return selection?.toString().length ?? 0;
+			});
+			if (selectedLength === 0)
+				throw new Error("Scripture text selection could not be established.");
+			await page.evaluate(() => {
+				document.documentElement.style.fontSize = "20px";
+				window.dispatchEvent(new Event("resize"));
+			});
+			await page.waitForTimeout(400);
+			strictEqual(
+				await page.evaluate(
+					() => window.getSelection()?.toString().length ?? 0,
+				),
+				selectedLength,
+				"Remeasurement retains the selected Scripture text",
+			);
+			await assertReaderGeometry(page);
+			await page.evaluate(() => window.getSelection()?.removeAllRanges());
+		}
+		if (name === "Chromium") {
 			checkpoint = "saved-page preview typography";
 			await page.emulateMedia({ reducedMotion: "no-preference" });
 			await page.setViewportSize({ width: 320, height: 568 });
@@ -256,6 +290,24 @@ for (const [name, engine] of [
 			.locator("[data-active-verse='b']")
 			.waitFor({ state: "attached" });
 		strictEqual(errors.length, 0);
+		if (name === "Chromium") {
+			checkpoint = "iOS standalone install presentation";
+			await page.addInitScript(() => {
+				Object.defineProperty(Navigator.prototype, "standalone", {
+					configurable: true,
+					get: () => true,
+				});
+			});
+			await page.goto(`${origin}/23/psalm/23/2?translation=CSB`);
+			await settledReader(page);
+			strictEqual(
+				await page.locator(".install-invitation").count(),
+				0,
+				"Standalone iOS does not show the browser install invitation",
+			);
+			await assertReaderGeometry(page);
+			strictEqual(errors.length, 0);
+		}
 		console.log(
 			`${name}: 28 responsive route/menu cases and failure recovery passed; no provider requests.`,
 		);

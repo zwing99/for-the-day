@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import {
+	type ReadingActions,
 	ReadingSurface,
 	verseAtReadingLine,
 } from "../../../src/client/reading-surface.js";
@@ -78,6 +79,62 @@ it("completes restoration once when layout changes before the readiness frames f
 			.querySelector("[data-active-verse]")
 			?.getAttribute("data-active-verse"),
 	).toBe("b");
+});
+it("lets only the latest destination and presentation finish pending restoration", () => {
+	const frames = new Map<number, FrameRequestCallback>();
+	let sequence = 0;
+	vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+		frames.set(++sequence, callback);
+		return sequence;
+	});
+	vi.spyOn(window, "cancelAnimationFrame").mockImplementation((id) => {
+		frames.delete(id);
+	});
+	const onReady = vi.fn();
+	const onLocation = vi.fn();
+	const chapter = semanticFixture();
+	const renderSurface = (
+		targetKey: string,
+		restoreId: number,
+		density: Density,
+		fontSize: "normal" | "large",
+	) => (
+		<main>
+			<ReadingSurface
+				chapter={chapter}
+				targetKey={targetKey}
+				restoreId={restoreId}
+				density={density}
+				fontSize={fontSize}
+				onReady={onReady}
+				onLocation={onLocation}
+			/>
+		</main>
+	);
+	const view = render(renderSurface("a", 21, "Spacious", "normal"));
+	view.rerender(renderSurface("b", 22, "Balanced", "large"));
+	view.rerender(renderSurface("d", 23, "Compact", "large"));
+	act(() => {
+		while (frames.size) {
+			const pending = [...frames.values()];
+			frames.clear();
+			for (const callback of pending) callback(0);
+		}
+	});
+	expect(onReady).toHaveBeenCalledTimes(1);
+	expect(onLocation).not.toHaveBeenCalled();
+	expect(
+		view.container
+			.querySelector("[data-active-verse]")
+			?.getAttribute("data-active-verse"),
+	).toBe("d");
+	view.rerender(renderSurface("b", 24, "Spacious", "normal"));
+	view.unmount();
+	act(() => {
+		for (const callback of frames.values()) callback(0);
+		frames.clear();
+	});
+	expect(onReady).toHaveBeenCalledTimes(1);
 });
 it.each(["ArrowUp", "ArrowDown", "PageUp", "PageDown"])(
 	"leaves %s to the browser while text is selected",
@@ -189,6 +246,141 @@ it("starts restoration with the requested semantic anchor rather than the first 
 			?.getAttribute("data-active-verse"),
 	).toBe("b");
 });
+it("recovers transient zero geometry without another resize event", () => {
+	vi.useFakeTimers({
+		toFake: [
+			"setTimeout",
+			"clearTimeout",
+			"requestAnimationFrame",
+			"cancelAnimationFrame",
+			"performance",
+		],
+	});
+	try {
+		let height = 0;
+		const unavailable = vi.fn();
+		const view = render(
+			<main>
+				<ReadingSurface
+					chapter={semanticFixture()}
+					onLayoutUnavailable={unavailable}
+				/>
+			</main>,
+		);
+		const main = view.container.querySelector("main")!;
+		const card = main.querySelector<HTMLElement>(".verse-card")!;
+		Object.defineProperty(card, "clientWidth", {
+			configurable: true,
+			value: 390,
+		});
+		card.style.cssText = "font-size:16px;line-height:24px;padding:0px";
+		Object.defineProperty(main, "clientHeight", {
+			configurable: true,
+			get: () => height,
+		});
+		Object.defineProperty(main, "clientWidth", {
+			configurable: true,
+			value: 390,
+		});
+		vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+			function (this: HTMLElement) {
+				if (this.classList.contains("verse-card"))
+					return {
+						top: 0,
+						bottom: 800,
+						left: 0,
+						right: 390,
+						width: 390,
+						height: 800,
+						x: 0,
+						y: 0,
+						toJSON: () => ({}),
+					};
+				return {
+					top: 0,
+					bottom: 800,
+					left: 0,
+					right: 390,
+					width: 390,
+					height: 800,
+					x: 0,
+					y: 0,
+					toJSON: () => ({}),
+				};
+			},
+		);
+		act(() => vi.advanceTimersByTime(150));
+		height = 800;
+		act(() => vi.advanceTimersByTime(800));
+		expect(unavailable).toHaveBeenCalledWith(false);
+		expect(unavailable).not.toHaveBeenCalledWith(true);
+	} finally {
+		vi.useRealTimers();
+	}
+});
+it("shows layout retry after bounded zero-geometry recovery and cancels on unmount", () => {
+	vi.useFakeTimers({
+		toFake: [
+			"setTimeout",
+			"clearTimeout",
+			"requestAnimationFrame",
+			"cancelAnimationFrame",
+			"performance",
+		],
+	});
+	try {
+		let height = 0;
+		const unavailable = vi.fn();
+		const actions = { current: null as ReadingActions | null };
+		const view = render(
+			<main>
+				<ReadingSurface
+					chapter={semanticFixture()}
+					actions={actions}
+					onLayoutUnavailable={unavailable}
+				/>
+			</main>,
+		);
+		const main = view.container.querySelector("main")!;
+		const card = main.querySelector<HTMLElement>(".verse-card")!;
+		Object.defineProperty(card, "clientWidth", {
+			configurable: true,
+			value: 390,
+		});
+		card.style.cssText = "font-size:16px;line-height:24px;padding:0px";
+		Object.defineProperty(main, "clientHeight", {
+			configurable: true,
+			get: () => height,
+		});
+		Object.defineProperty(main, "clientWidth", {
+			configurable: true,
+			value: 390,
+		});
+		vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+			top: 0,
+			bottom: 800,
+			left: 0,
+			right: 390,
+			width: 390,
+			height: 800,
+			x: 0,
+			y: 0,
+			toJSON: () => ({}),
+		});
+		act(() => vi.advanceTimersByTime(2100));
+		expect(unavailable).toHaveBeenCalledWith(true);
+		height = 800;
+		act(() => actions.current?.retryLayout());
+		act(() => vi.advanceTimersByTime(150));
+		expect(unavailable).toHaveBeenLastCalledWith(false);
+		view.unmount();
+		const calls = unavailable.mock.calls.length;
+		act(() => vi.advanceTimersByTime(2100));
+		expect(unavailable).toHaveBeenCalledTimes(calls);
+	} finally {
+		vi.useRealTimers();
+	}
+});
 it("tracks semantic markers in a tall card even when no card has 60% visibility", () => {
 	const markers = [
 		{ key: "a", top: -1600 },
@@ -241,8 +433,8 @@ it("offers keyboard card navigation and honors reduced motion", () => {
 	expect(document.activeElement).toBe(container.querySelectorAll("article")[1]);
 });
 
-it.each(["wheel", "touch"])(
-	"settles rapid %s scrolling at the current page instead of pulling back to the gesture origin",
+it.each(["wheel", "touch", "touch+resize"])(
+	"keeps the resulting page through rapid %s scrolling",
 	(input) => {
 		vi.useFakeTimers({
 			toFake: [
@@ -301,13 +493,20 @@ it.each(["wheel", "touch"])(
 				fireEvent.touchStart(main, {
 					touches: [{ clientX: 200, clientY: 400 }],
 				});
+			if (input === "touch+resize") fireEvent.resize(window);
 			// Momentum or repeated fast input has reached the third page before settling.
 			main.scrollTop = 1580;
 			fireEvent.scroll(main);
-			if (input === "touch") fireEvent.touchEnd(main, { touches: [] });
+			if (input === "touch+resize") act(() => vi.advanceTimersByTime(16));
+			if (input.startsWith("touch")) fireEvent.touchEnd(main, { touches: [] });
 			fireEvent(main, new Event("scrollend"));
-			expect(scroll).toHaveBeenCalledWith({ top: 1600, behavior: "instant" });
-			expect(main.scrollTop).toBe(1600);
+			if (input === "touch+resize") {
+				expect(scroll).not.toHaveBeenCalled();
+				expect(main.scrollTop).toBe(1580);
+			} else {
+				expect(scroll).toHaveBeenCalledWith({ top: 1600, behavior: "instant" });
+				expect(main.scrollTop).toBe(1600);
+			}
 			expect(onLocation).toHaveBeenLastCalledWith("c");
 		} finally {
 			vi.useRealTimers();

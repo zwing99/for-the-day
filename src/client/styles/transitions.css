@@ -56,7 +56,26 @@
 		transform: none !important;
 		transition: none !important;
 	}
-	.passage-preview {
-		display: none;
-	}
+}
+
+.reading-layout-fallback {
+	position: absolute;
+	z-index: 2;
+	inset: 0;
+	display: grid;
+	place-content: center;
+	gap: 0.75rem;
+	padding: 1.5rem;
+	background: var(--reader-background);
+	font-family: system-ui, sans-serif;
+	text-align: center;
+}
+
+.reading-layout-fallback p {
+	margin: 0;
+}
+
+.reading-layout-fallback button,
+.passage-preview-placeholder button {
+	min-height: 44px;
 }

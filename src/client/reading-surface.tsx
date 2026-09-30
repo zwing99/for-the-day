@@ -37,6 +37,7 @@ export function verseAtReadingLine(
 
 export interface ReadingActions {
 	move(direction: number): void;
+	retryLayout(): void;
 }
 
 export function readingLineOffset(
@@ -68,11 +69,13 @@ export function ReadingSurface({
 	onLocation,
 	onReady,
 	onPreparing,
+	onLayoutUnavailable,
 	density = "Spacious",
 	fontSize = "normal",
 	actions,
 	intro,
 	passive = false,
+	deferFocus = false,
 }: {
 	chapter: SemanticChapter;
 	actions?: Ref<ReadingActions>;
@@ -82,9 +85,11 @@ export function ReadingSurface({
 	onLocation?: (key: string) => void;
 	onReady?: () => void;
 	onPreparing?: () => void;
+	onLayoutUnavailable?: (unavailable: boolean) => void;
 	density?: Density;
 	fontSize?: "normal" | "large" | "larger";
 	passive?: boolean;
+	deferFocus?: boolean;
 }) {
 	const content = useRef<HTMLDivElement>(null);
 	const [active, setActive] = useState(targetKey ?? chapter.verses[0]?.key);
@@ -92,10 +97,22 @@ export function ReadingSurface({
 	anchor.current = active;
 	const priorRestore = useRef<number | undefined>(undefined);
 	const completedRestore = useRef<number | undefined>(undefined);
+	const completedPresentation = useRef("");
 	const [budget, setBudget] = useState({ columns: 28, lines: 16 });
 	const [surfaceSize, setSurfaceSize] = useState({ width: 0, height: 0 });
 	const [fontRevision, setFontRevision] = useState(0);
 	const [measurementReady, setMeasurementReady] = useState(false);
+	const [retryRevision, setRetryRevision] = useState(0);
+	const hasMeasured = useRef(false);
+	const measurementGeneration = useRef(0);
+	const restoring = useRef(false);
+	const inputActive = useRef(false);
+	const completionGeneration = useRef(0);
+	const currentPresentation = useRef("");
+	const currentRestore = useRef(restoreId);
+	const unavailableCallback = useRef(onLayoutUnavailable);
+	currentRestore.current = restoreId;
+	unavailableCallback.current = onLayoutUnavailable;
 	const [labelRevision, setLabelRevision] = useState(0);
 	const [layoutOverride, setLayoutOverride] = useState<{
 		key: string;
@@ -106,6 +123,7 @@ export function ReadingSurface({
 		scales: Record<string, number>;
 	}>();
 	const layoutKey = `${chapter.identity.editionKey}:${chapter.identity.book}:${chapter.identity.chapter}:${density}:${fontSize}:${fontRevision}:${labelRevision}:${budget.columns}x${budget.lines}:${surfaceSize.width}x${surfaceSize.height}`;
+	currentPresentation.current = layoutKey;
 	const baseCards = useMemo(
 		() => packChapter(chapter, density, budget),
 		[chapter, density, budget],
@@ -162,12 +180,18 @@ export function ReadingSurface({
 		const surface = content.current?.closest("main");
 		if (!surface) return;
 		let timer: ReturnType<typeof setTimeout>;
+		let recoveryTimer: ReturnType<typeof setTimeout>;
 		let disposed = false;
+		let recoveryStarted = 0;
+		let recoveryAttempt = 0;
+		measurementGeneration.current++;
+		const delays = [60, 120, 240, 360, 480, 600];
 		function measure() {
 			const card = content.current?.querySelector(".verse-card");
-			if (!card) return;
+			if (!card) return false;
 			const css = getComputedStyle(card);
-			if (!surface?.clientHeight || !card.getBoundingClientRect().width) return;
+			if (!surface?.clientHeight || !card.getBoundingClientRect().width)
+				return false;
 			const next = layoutBudget(
 				card.getBoundingClientRect().width -
 					parseFloat(css.paddingLeft) -
@@ -199,13 +223,46 @@ export function ReadingSurface({
 					: next,
 			);
 			setMeasurementReady(true);
+			hasMeasured.current = true;
+			unavailableCallback.current?.(false);
+			clearTimeout(recoveryTimer);
+			return true;
+		}
+		function recover(generation: number) {
+			if (disposed || generation !== measurementGeneration.current) return;
+			if (document.visibilityState === "hidden") return;
+			if (measure()) return;
+			const elapsed = performance.now() - recoveryStarted;
+			if (elapsed >= 2000) {
+				const surfaceUnavailable =
+					!surface?.clientWidth || !surface?.clientHeight;
+				if (!hasMeasured.current || surfaceUnavailable) {
+					unavailableCallback.current?.(true);
+				}
+				// Exhaustion releases the tracking lock; retry starts a new generation.
+				restoring.current = false;
+				return;
+			}
+			const delay = delays[Math.min(recoveryAttempt++, delays.length - 1)]!;
+			recoveryTimer = setTimeout(
+				() => recover(generation),
+				Math.min(delay, Math.max(1, 2000 - elapsed)),
+			);
 		}
 		const resize = () => {
 			if (disposed) return;
+			const currentGeneration = ++measurementGeneration.current;
 			restoring.current = true;
 			setMeasurementReady(false);
+			unavailableCallback.current?.(false);
 			clearTimeout(timer);
-			timer = setTimeout(measure, 120);
+			clearTimeout(recoveryTimer);
+			recoveryAttempt = 0;
+			recoveryStarted = performance.now();
+			timer = setTimeout(() => {
+				if (currentGeneration !== measurementGeneration.current) return;
+				if (!measure()) recover(currentGeneration);
+			}, 120);
 		};
 		const fontLoaded = () => {
 			if (disposed) return;
@@ -220,15 +277,19 @@ export function ReadingSurface({
 				: new ResizeObserver(resize);
 		observer?.observe(surface);
 		window.addEventListener("resize", resize);
+		document.addEventListener("visibilitychange", resize);
 		resize();
 		return () => {
 			disposed = true;
+			measurementGeneration.current++;
 			clearTimeout(timer);
+			clearTimeout(recoveryTimer);
 			observer?.disconnect();
 			document.fonts?.removeEventListener("loadingdone", fontLoaded);
 			window.removeEventListener("resize", resize);
+			document.removeEventListener("visibilitychange", resize);
 		};
-	}, [fontSize]);
+	}, [fontSize, retryRevision]);
 	useEffect(() => {
 		const element = content.current;
 		const surface = element?.closest("main");
@@ -334,7 +395,6 @@ export function ReadingSurface({
 		fontScaleKey,
 		fitOverride,
 	]);
-	const restoring = useRef(false);
 	const callbacks = useRef({ onLocation, onReady });
 	callbacks.current = { onLocation, onReady };
 	useLayoutEffect(() => {
@@ -342,6 +402,8 @@ export function ReadingSurface({
 		// Layoutless DOM tests have no measurable surface. Real surfaces wait
 		// until measured packing and fitting complete before announcing readiness.
 		if (content.current?.closest("main")?.clientHeight && !fitReady) return;
+		const token = `${restoreId}:${layoutKey}:${targetKey ?? ""}`;
+		const generation = ++completionGeneration.current;
 		const navigation = priorRestore.current !== restoreId;
 		const wanted = navigation ? targetKey : anchor.current;
 		priorRestore.current = restoreId;
@@ -359,36 +421,62 @@ export function ReadingSurface({
 				? content.current?.querySelector<HTMLElement>(".intro")
 				: undefined);
 		const surface = content.current?.closest("main");
+		const deferAlignment = !navigation && inputActive.current;
 		if (card && surface) {
 			surface.style.scrollSnapType = "none";
-			surface.scrollTo?.({
-				top:
-					surface.scrollTop +
-					card.getBoundingClientRect().top -
-					surface.getBoundingClientRect().top,
-				behavior: "instant",
-			});
+			if (!deferAlignment)
+				surface.scrollTo?.({
+					top:
+						surface.scrollTop +
+						card.getBoundingClientRect().top -
+						surface.getBoundingClientRect().top,
+					behavior: "instant",
+				});
 			surface.style.scrollSnapType = "";
 			setActive(wanted);
-			if (!passive && navigation && !document.querySelector("dialog[open]"))
+			if (
+				!passive &&
+				!deferFocus &&
+				navigation &&
+				!document.querySelector("dialog[open]")
+			)
 				card.focus({ preventScroll: true });
 		}
 		let second = 0;
 		const frame = requestAnimationFrame(() => {
 			second = requestAnimationFrame(() => {
+				if (
+					generation !== completionGeneration.current ||
+					currentPresentation.current !== layoutKey ||
+					currentRestore.current !== restoreId
+				)
+					return;
 				restoring.current = false;
-				if (passive || completedRestore.current !== restoreId) {
+				if (
+					!passive &&
+					deferFocus &&
+					navigation &&
+					!document.querySelector("dialog[open]")
+				)
+					card?.focus({ preventScroll: true });
+				if (completedRestore.current !== restoreId) {
 					completedRestore.current = restoreId;
 					callbacks.current.onReady?.();
-				} else if (wanted) callbacks.current.onLocation?.(wanted);
+				} else if (token !== completedPresentation.current) {
+					if (passive) callbacks.current.onReady?.();
+					else if (wanted) callbacks.current.onLocation?.(wanted);
+				}
+				completedPresentation.current = token;
 			});
 		});
 		return () => {
+			completionGeneration.current++;
 			cancelAnimationFrame(frame);
 			cancelAnimationFrame(second);
 		};
 	}, [
 		restoreId,
+		layoutKey,
 		targetKey,
 		packingKey,
 		fitReady,
@@ -399,6 +487,7 @@ export function ReadingSurface({
 		fontRevision,
 		surfaceSize,
 		passive,
+		deferFocus,
 	]);
 	useEffect(() => {
 		if (passive) return;
@@ -413,21 +502,31 @@ export function ReadingSurface({
 			...surface.querySelectorAll<HTMLElement>(":scope > .attribution"),
 		];
 		const update = () => {
-			if (restoring.current) return;
+			if (restoring.current && !inputActive.current) return;
 			const top = surface.getBoundingClientRect().top;
-			const currentCard = pages().find(
+			const candidates = pages();
+			const currentCard = candidates.find(
 				(page) => Math.abs(page.getBoundingClientRect().top - top) <= 2,
 			);
-			if (!currentCard || currentCard.classList.contains("attribution")) return;
+			const readingCard =
+				currentCard ??
+				(inputActive.current
+					? candidates.sort(
+							(a, b) =>
+								Math.abs(a.getBoundingClientRect().top - top) -
+								Math.abs(b.getBoundingClientRect().top - top),
+						)[0]
+					: undefined);
+			if (!readingCard || readingCard.classList.contains("attribution")) return;
 			const markers = [
-				...currentCard.querySelectorAll<HTMLElement>("[data-location-key]"),
+				...readingCard.querySelectorAll<HTMLElement>("[data-location-key]"),
 			];
 			const retained = markers.some((marker) =>
 				JSON.parse(marker.dataset.locationKeys ?? "[]").includes(
 					anchor.current,
 				),
 			);
-			const key = currentCard.classList.contains("intro")
+			const key = readingCard.classList.contains("intro")
 				? "intro"
 				: retained
 					? anchor.current
@@ -436,8 +535,9 @@ export function ReadingSurface({
 			if (key) callbacks.current.onLocation?.(key);
 		};
 		const settle = () => {
-			if (restoring.current || touching || document.getSelection()?.toString())
-				return;
+			if (touching || document.getSelection()?.toString()) return;
+			inputActive.current = false;
+			if (restoring.current) return;
 			const top = surface.getBoundingClientRect().top;
 			const closest = pages().sort(
 				(a, b) =>
@@ -462,10 +562,19 @@ export function ReadingSurface({
 		};
 		const touchStart = () => {
 			touching = true;
+			inputActive.current = true;
 			clearTimeout(settled);
 		};
 		const touchEnd = () => {
 			touching = false;
+			clearTimeout(settled);
+			settled = setTimeout(settle, 180);
+		};
+		const inputStart = () => {
+			inputActive.current = true;
+			clearTimeout(settled);
+		};
+		const inputEnd = () => {
 			clearTimeout(settled);
 			settled = setTimeout(settle, 180);
 		};
@@ -480,6 +589,12 @@ export function ReadingSurface({
 		surface.addEventListener("touchstart", touchStart, { passive: true });
 		surface.addEventListener("touchend", touchEnd, { passive: true });
 		surface.addEventListener("touchcancel", touchEnd, { passive: true });
+		surface.addEventListener("wheel", inputStart, { passive: true });
+		surface.addEventListener("wheel", inputEnd, { passive: true });
+		surface.addEventListener("pointerdown", inputStart, { passive: true });
+		window.addEventListener("pointerup", inputEnd, { passive: true });
+		surface.addEventListener("keydown", inputStart);
+		surface.addEventListener("keyup", inputEnd);
 		window.addEventListener("resize", scroll);
 		const observer =
 			typeof IntersectionObserver === "undefined"
@@ -499,6 +614,12 @@ export function ReadingSurface({
 			surface.removeEventListener("touchstart", touchStart);
 			surface.removeEventListener("touchend", touchEnd);
 			surface.removeEventListener("touchcancel", touchEnd);
+			surface.removeEventListener("wheel", inputStart);
+			surface.removeEventListener("wheel", inputEnd);
+			surface.removeEventListener("pointerdown", inputStart);
+			window.removeEventListener("pointerup", inputEnd);
+			surface.removeEventListener("keydown", inputStart);
+			surface.removeEventListener("keyup", inputEnd);
 			window.removeEventListener("resize", scroll);
 			observer?.disconnect();
 			surface.removeEventListener("wheel", resumeSnap);
@@ -506,6 +627,10 @@ export function ReadingSurface({
 			surface.removeEventListener("keydown", resumeSnap);
 		};
 	}, [chapter, packingKey, !!intro, passive]);
+	function retryLayout() {
+		unavailableCallback.current?.(false);
+		setRetryRevision((revision) => revision + 1);
+	}
 	function move(direction: number) {
 		const surface = content.current?.closest("main");
 		const cards = [
@@ -548,7 +673,7 @@ export function ReadingSurface({
 		});
 		target.focus({ preventScroll: true });
 	}
-	useImperativeHandle(actions, () => ({ move }));
+	useImperativeHandle(actions, () => ({ move, retryLayout }));
 	return (
 		<div
 			ref={content}

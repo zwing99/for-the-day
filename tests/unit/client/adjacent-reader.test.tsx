@@ -20,6 +20,7 @@ beforeEach(() => {
 afterEach(() => {
 	cleanup();
 	vi.restoreAllMocks();
+	vi.unstubAllGlobals();
 });
 
 it("warms the next neighbor after the active passage and isolates a failed warm-up", async () => {
@@ -120,6 +121,143 @@ it("reveals a saved verse in an inert ready preview without activating it", asyn
 	});
 	expect(push).toHaveBeenCalledTimes(1);
 	expect(save).toHaveBeenCalled();
+});
+
+it("keeps the committed destination visible when its prepared preview is invalidated", async () => {
+	const frames = new Map<number, FrameRequestCallback>();
+	let sequence = 0;
+	vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+		frames.set(++sequence, callback);
+		return sequence;
+	});
+	vi.spyOn(window, "cancelAnimationFrame").mockImplementation((id) => {
+		frames.delete(id);
+	});
+	vi.stubGlobal(
+		"matchMedia",
+		vi.fn((media: string) => ({
+			matches: media === "(prefers-reduced-motion: reduce)",
+			media,
+			addListener: vi.fn(),
+			removeListener: vi.fn(),
+			addEventListener: vi.fn(),
+			removeEventListener: vi.fn(),
+			dispatchEvent: vi.fn(() => true),
+			onchange: null,
+		})),
+	);
+	const finishFrames = () =>
+		act(() => {
+			while (frames.size) {
+				const pending = [...frames.values()];
+				frames.clear();
+				for (const callback of pending) callback(0);
+			}
+		});
+	const storage = new ReadingStorage();
+	storage.savePosition({
+		day: 7,
+		book: "PSA",
+		chapter: 37,
+		translation: "CSB",
+		location: "2",
+	});
+	const push = vi.spyOn(window.history, "pushState");
+	const save = vi.spyOn(storage, "savePosition");
+	const report = vi.fn();
+	const focus = vi.spyOn(HTMLElement.prototype, "focus");
+	const get = vi.fn(async (passage: Passage) => {
+		const chapter = semanticFixture();
+		chapter.identity.book = passage.book;
+		chapter.identity.chapter = passage.chapter;
+		return chapter;
+	});
+	const view = render(
+		<Reader
+			source={{ get, cacheAware: true }}
+			storage={storage}
+			report={report}
+		/>,
+	);
+	await screen.findByRole("button", { name: "Begin reading" });
+	finishFrames();
+	focus.mockClear();
+	const main = screen.getByRole("main");
+	const touch = (clientX: number) => ({ clientX, clientY: 200 });
+	fireEvent.touchStart(main, { touches: [touch(200)] });
+	fireEvent.touchMove(main, { touches: [touch(100)] });
+	await waitFor(() =>
+		expect(
+			view.container.querySelector(".passage-preview-content"),
+		).toBeTruthy(),
+	);
+	finishFrames();
+	await waitFor(() =>
+		expect(
+			view.container.querySelector<HTMLElement>(".passage-preview-content")
+				?.style.visibility,
+		).toBe("visible"),
+	);
+	expect(
+		view.container
+			.querySelector(".passage-preview [data-active-verse]")
+			?.getAttribute("data-active-verse"),
+	).toBe("b");
+	fireEvent.touchEnd(main, { touches: [], changedTouches: [touch(100)] });
+	expect(
+		view.container
+			.querySelector(".passage-stage")
+			?.getAttribute("data-handoff"),
+	).toBe("ready");
+	const activeMain = view.container.querySelector<HTMLElement>(
+		".passage-stage > main.reading-scroll:first-child",
+	)!;
+	const activeText = activeMain.querySelector(
+		"[data-semantic-text]",
+	)?.textContent;
+	expect(
+		activeMain
+			.querySelector("[data-active-verse]")
+			?.getAttribute("data-active-verse"),
+	).toBe("b");
+	expect(activeText).toBeTruthy();
+	fireEvent.resize(window);
+	expect(
+		view.container
+			.querySelector(".passage-stage")
+			?.hasAttribute("data-handoff"),
+	).toBe(false);
+	expect(activeMain.getAttribute("aria-label")).toBe("Scripture reader");
+	expect(activeMain.querySelector("[data-semantic-text]")?.textContent).toBe(
+		activeText,
+	);
+	window.history.replaceState(null, "", "/7/psalm/7/1a?translation=CSB");
+	act(() => window.dispatchEvent(new PopStateEvent("popstate")));
+	await waitFor(() => {
+		expect(
+			view.container.querySelector(".reader-context p")?.textContent,
+		).toContain("Psalm 7");
+		expect(
+			view.container
+				.querySelector(".reading-scroll [data-active-verse]")
+				?.getAttribute("data-active-verse"),
+		).toBe("a");
+	});
+	expect(window.location.pathname).toBe("/7/psalm/7/1a");
+	expect(push).toHaveBeenCalledTimes(1);
+	finishFrames();
+	const sideEffects = {
+		pushes: push.mock.calls.length,
+		saves: save.mock.calls.length,
+		reports: report.mock.calls.length,
+		focuses: focus.mock.calls.length,
+	};
+	fireEvent.resize(window);
+	finishFrames();
+	expect(push).toHaveBeenCalledTimes(sideEffects.pushes);
+	expect(save).toHaveBeenCalledTimes(sideEffects.saves);
+	expect(report).toHaveBeenCalledTimes(sideEffects.reports);
+	expect(focus).toHaveBeenCalledTimes(sideEffects.focuses);
 });
 
 it("keeps the horizontal offset when a delayed neighbor becomes ready", async () => {
